@@ -1,0 +1,44 @@
+services:
+  frontend:
+    build: { context: ., dockerfile: frontend/Dockerfile }
+    ports: ["8080:8080"]
+    environment:
+      BACKEND_HOST: backend
+    networks:
+      public: {}
+      app_net: { ipv4_address: 10.10.1.10 }
+    depends_on: [backend]
+
+  backend:
+    build: { context: ., dockerfile: backend/Dockerfile }
+    # Intentionally no "ports:" section
+    environment:
+      ALLOWED_CLIENT_IP: 10.10.1.10
+    networks:
+      app_net: { ipv4_address: 10.10.1.20 }
+      db_net:  { ipv4_address: 10.10.2.20 }
+    depends_on: [db]
+
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: appdb
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - dbdata:/var/lib/postgresql/data
+    networks:
+      db_net: { ipv4_address: 10.10.2.30 }
+
+networks:
+  public: {}
+  app_net:
+    internal: true
+    ipam: { config: [{ subnet: 10.10.1.0/24 }] }
+  db_net:
+    internal: true
+    ipam: { config: [{ subnet: 10.10.2.0/24 }] }
+
+volumes:
+  dbdata:
