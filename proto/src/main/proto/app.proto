@@ -9,3 +9,177 @@ service Greeter {
 
 message HelloRequest { string name = 1; }
 message HelloReply   { string message = 1; }
+
+service FestHub {
+  rpc CreateConcertEvent (CreateConcertEventRequest) returns (ConcertEventResponse);
+  rpc GetConcertEvent (GetByIdRequest) returns (ConcertEventResponse);
+  rpc ListConcertEvents (ListRequest) returns (ListConcertEventsResponse);
+  rpc UpdateConcertEvent (UpdateConcertEventRequest) returns (ConcertEventResponse);
+  rpc DeleteConcertEvent (GetByIdRequest) returns (DeleteResponse);
+
+  rpc CreateArtist (CreateArtistRequest) returns (ArtistResponse);
+  rpc GetArtist (GetByIdRequest) returns (ArtistResponse);
+  rpc ListArtists (ListRequest) returns (ListArtistsResponse);
+  rpc UpdateArtist (UpdateArtistRequest) returns (ArtistResponse);
+  rpc DeleteArtist (GetByIdRequest) returns (DeleteResponse);
+
+  rpc CreateBookingCategory (CreateBookingCategoryRequest) returns (BookingCategoryResponse);
+  rpc GetBookingCategory (GetByIdRequest) returns (BookingCategoryResponse);
+  rpc ListBookingCategories (ListRequest) returns (ListBookingCategoriesResponse);
+  rpc UpdateBookingCategory (UpdateBookingCategoryRequest) returns (BookingCategoryResponse);
+  rpc DeleteBookingCategory (GetByIdRequest) returns (DeleteResponse);
+
+  rpc CreatePromoMedia (CreatePromoMediaRequest) returns (PromoMediaResponse);
+  rpc GetPromoMedia (GetByIdRequest) returns (PromoMediaResponse);
+  rpc ListPromoMedia (ListRequest) returns (ListPromoMediaResponse);
+  rpc UpdatePromoMedia (UpdatePromoMediaRequest) returns (PromoMediaResponse);
+  rpc DeletePromoMedia (GetByIdRequest) returns (DeleteResponse);
+
+  rpc AddArtistToEvent (EventArtistRequest) returns (RelationshipResponse);
+  rpc RemoveArtistFromEvent (EventArtistRequest) returns (RelationshipResponse);
+  rpc AddCategoryToEvent (EventCategoryRequest) returns (RelationshipResponse);
+  rpc RemoveCategoryFromEvent (EventCategoryRequest) returns (RelationshipResponse);
+}
+
+message ConcertEvent {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  int32 available_tickets = 4;
+  int64 ticket_price_cents = 5;
+  repeated string artist_ids = 6;
+  repeated string category_ids = 7;
+  repeated string promo_media_ids = 8;
+}
+
+message Artist {
+  string id = 1;
+  string name = 2;
+  string booking_contact = 3;
+  repeated string event_ids = 4;
+}
+
+message BookingCategory {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  repeated string event_ids = 4;
+}
+
+message PromoMedia {
+  string id = 1;
+  string event_id = 2;
+  string image_url = 3;
+}
+
+message CreateConcertEventRequest {
+  optional string id = 1;
+  string name = 2;
+  string description = 3;
+  int32 available_tickets = 4;
+  int64 ticket_price_cents = 5;
+}
+
+message UpdateConcertEventRequest {
+  string id = 1;
+  optional string name = 2;
+  optional string description = 3;
+  optional int32 available_tickets = 4;
+  optional int64 ticket_price_cents = 5;
+}
+
+message CreateArtistRequest {
+  string name = 1;
+  string booking_contact = 2;
+}
+
+message UpdateArtistRequest {
+  string id = 1;
+  string name = 2;
+  string booking_contact = 3;
+}
+
+message CreateBookingCategoryRequest {
+  string name = 1;
+  string description = 2;
+}
+
+message UpdateBookingCategoryRequest {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+}
+
+message CreatePromoMediaRequest {
+  string event_id = 1;
+  string image_url = 2;
+}
+
+message UpdatePromoMediaRequest {
+  string id = 1;
+  string event_id = 2;
+  string image_url = 3;
+}
+
+message GetByIdRequest {
+  string id = 1;
+}
+
+message ListRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+}
+
+message ConcertEventResponse {
+  ConcertEvent concert_event = 1;
+}
+
+message ListConcertEventsResponse {
+  repeated ConcertEvent concert_events = 1;
+  string next_page_token = 2;
+}
+
+message ArtistResponse {
+  Artist artist = 1;
+}
+
+message ListArtistsResponse {
+  repeated Artist artists = 1;
+  string next_page_token = 2;
+}
+
+message BookingCategoryResponse {
+  BookingCategory booking_category = 1;
+}
+
+message ListBookingCategoriesResponse {
+  repeated BookingCategory booking_categories = 1;
+  string next_page_token = 2;
+}
+
+message PromoMediaResponse {
+  PromoMedia promo_media = 1;
+}
+
+message ListPromoMediaResponse {
+  repeated PromoMedia promo_media = 1;
+  string next_page_token = 2;
+}
+
+message DeleteResponse {
+  bool deleted = 1;
+}
+
+message EventArtistRequest {
+  string event_id = 1;
+  string artist_id = 2;
+}
+
+message EventCategoryRequest {
+  string event_id = 1;
+  string category_id = 2;
+}
+
+message RelationshipResponse {
+  bool changed = 1;
+}
