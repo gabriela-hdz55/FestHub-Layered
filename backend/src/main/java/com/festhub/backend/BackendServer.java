@@ -5,12 +5,16 @@ import io.grpc.InsecureServerCredentials;
 import io.grpc.Server;
 import io.grpc.ServerInterceptors;
 
+import com.festhub.backend.data.Database;
+
 public class BackendServer {
     public static void main(String[] args) throws Exception {
         String allowedIp = System.getenv("ALLOWED_CLIENT_IP");
         if (allowedIp == null || allowedIp.isBlank()) {
             throw new IllegalStateException("ALLOWED_CLIENT_IP must be set");
         }
+
+        Database.initialize();
 
         Server server = Grpc.newServerBuilderForPort(50051, InsecureServerCredentials.create())
                 .addService(ServerInterceptors.intercept(
