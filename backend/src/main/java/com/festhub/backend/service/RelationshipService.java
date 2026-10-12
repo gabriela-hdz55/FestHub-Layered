@@ -12,6 +12,8 @@ import java.util.UUID;
 
 public final class RelationshipService {
 
+    public static final long MAX_ARTIST_TICKET_PRICE_SUM_CENTS = 50_000_000L;
+
     private final RelationshipRepository relationshipRepository;
     private final ConcertEventRepository concertEventRepository;
     private final ArtistRepository artistRepository;
@@ -32,10 +34,10 @@ public final class RelationshipService {
         Objects.requireNonNull(eventId);
         Objects.requireNonNull(artistId);
 
-        verifyEventExists(eventId);
-        verifyArtistExists(artistId);
-
-        return relationshipRepository.addArtistToEvent(eventId, artistId);
+        return relationshipRepository.addArtistToEvent(
+                eventId,
+                artistId,
+                MAX_ARTIST_TICKET_PRICE_SUM_CENTS);
     }
 
     public boolean removeArtistFromEvent(UUID eventId, UUID artistId) {

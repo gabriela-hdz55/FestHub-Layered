@@ -16,5 +16,13 @@ public interface ConcertEventRepository {
 
     Optional<ConcertEvent> update(ConcertEvent event);
 
+    Optional<ConcertEvent> updateWithCrossRecordChecks(
+            UUID id,
+            Optional<String> name,
+            Optional<String> description,
+            Optional<Integer> availableTickets,
+            Optional<Long> ticketPriceCents,
+            long maxArtistTicketPriceSumCents);
+
     boolean deleteById(UUID id);
 }

@@ -5,7 +5,10 @@ import java.util.UUID;
 
 public interface RelationshipRepository {
 
-    boolean addArtistToEvent(UUID eventId, UUID artistId);
+    boolean addArtistToEvent(
+            UUID eventId,
+            UUID artistId,
+            long maxTicketPriceSumCents);
 
     boolean removeArtistFromEvent(UUID eventId, UUID artistId);
 

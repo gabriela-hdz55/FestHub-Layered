@@ -10,13 +10,48 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import java.util.NoSuchElementException;
+
 public final class JdbcRelationshipRepository
         implements RelationshipRepository {
 
-    private static final String ADD_ARTIST_SQL = """
+    private static final String LOCK_CONCERT_EVENT_FOR_UPDATE_SQL = """
+            SELECT id, name, ticket_price_cents
+            FROM concert_event
+            WHERE id = ?
+            FOR UPDATE
+            """;
+
+    private static final String LOCK_ARTIST_FOR_UPDATE_SQL = """
+            SELECT id
+            FROM artist
+            WHERE id = ?
+            FOR UPDATE
+            """;
+
+    private static final String CHECK_EXISTING_RELATIONSHIP_SQL = """
+            SELECT 1
+            FROM event_artist
+            WHERE event_id = ? AND artist_id = ?
+            """;
+
+    private static final String CHECK_EVENT_NAME_COLLISION_SQL = """
+            SELECT 1
+            FROM concert_event ce
+            JOIN event_artist ea ON ea.event_id = ce.id
+            WHERE ea.artist_id = ? AND ce.id != ? AND ce.name = ?
+            """;
+
+    private static final String CALCULATE_ARTIST_TICKET_PRICE_SUM_SQL = """
+            SELECT COALESCE(SUM(ce.ticket_price_cents), 0)
+            FROM concert_event ce
+            JOIN event_artist ea ON ea.event_id = ce.id
+            WHERE ea.artist_id = ?
+            """;
+
+    private static final String INSERT_RELATIONSHIP_SQL = """
             INSERT INTO event_artist (event_id, artist_id)
             VALUES (?, ?)
-            ON CONFLICT DO NOTHING
             """;
 
     private static final String REMOVE_ARTIST_SQL = """
@@ -71,18 +106,102 @@ public final class JdbcRelationshipRepository
             """;
 
     @Override
-    public boolean addArtistToEvent(UUID eventId, UUID artistId) {
-        try (
-                Connection connection = Database.connect();
-                PreparedStatement statement = connection.prepareStatement(ADD_ARTIST_SQL)) {
-            statement.setObject(1, eventId);
-            statement.setObject(2, artistId);
+    public boolean addArtistToEvent(
+            UUID eventId,
+            UUID artistId,
+            long maxTicketPriceSumCents) {
+        try (Connection connection = Database.connect()) {
+            connection.setAutoCommit(false);
 
-            return statement.executeUpdate() > 0;
+            try {
+                // 1. Lock and load ConcertEvent first
+                String eventName;
+                long eventTicketPrice;
+                try (PreparedStatement stmt = connection.prepareStatement(LOCK_CONCERT_EVENT_FOR_UPDATE_SQL)) {
+                    stmt.setObject(1, eventId);
+                    try (ResultSet rs = stmt.executeQuery()) {
+                        if (!rs.next()) {
+                            connection.rollback();
+                            throw new NoSuchElementException("Concert event not found");
+                        }
+                        eventName = rs.getString("name");
+                        eventTicketPrice = rs.getLong("ticket_price_cents");
+                    }
+                }
+
+                // 2. Lock Artist second
+                try (PreparedStatement stmt = connection.prepareStatement(LOCK_ARTIST_FOR_UPDATE_SQL)) {
+                    stmt.setObject(1, artistId);
+                    try (ResultSet rs = stmt.executeQuery()) {
+                        if (!rs.next()) {
+                            connection.rollback();
+                            throw new NoSuchElementException("Artist not found");
+                        }
+                    }
+                }
+
+                // 3. Check existing relationship
+                try (PreparedStatement stmt = connection.prepareStatement(CHECK_EXISTING_RELATIONSHIP_SQL)) {
+                    stmt.setObject(1, eventId);
+                    stmt.setObject(2, artistId);
+                    try (ResultSet rs = stmt.executeQuery()) {
+                        if (rs.next()) {
+                            connection.commit();
+                            return false;
+                        }
+                    }
+                }
+
+                // 4. Check event-name collision
+                try (PreparedStatement stmt = connection.prepareStatement(CHECK_EVENT_NAME_COLLISION_SQL)) {
+                    stmt.setObject(1, artistId);
+                    stmt.setObject(2, eventId);
+                    stmt.setString(3, eventName);
+                    try (ResultSet rs = stmt.executeQuery()) {
+                        if (rs.next()) {
+                            connection.rollback();
+                            throw new IllegalArgumentException(
+                                    "Artist is already booked for another concert event named '" + eventName + "'");
+                        }
+                    }
+                }
+
+                // 5. Calculate projected Artist ticket-price total
+                long currentSum;
+                try (PreparedStatement stmt = connection.prepareStatement(CALCULATE_ARTIST_TICKET_PRICE_SUM_SQL)) {
+                    stmt.setObject(1, artistId);
+                    try (ResultSet rs = stmt.executeQuery()) {
+                        rs.next();
+                        currentSum = rs.getLong(1);
+                    }
+                }
+
+                long projectedTotal = currentSum + eventTicketPrice;
+                if (projectedTotal > maxTicketPriceSumCents) {
+                    connection.rollback();
+                    throw new IllegalArgumentException(
+                            "Artist ticket price cap of $500,000 exceeded (projected total: "
+                                    + projectedTotal
+                                    + " cents, cap: "
+                                    + maxTicketPriceSumCents
+                                    + " cents)");
+                }
+
+                // 6. Insert event_artist relationship
+                try (PreparedStatement stmt = connection.prepareStatement(INSERT_RELATIONSHIP_SQL)) {
+                    stmt.setObject(1, eventId);
+                    stmt.setObject(2, artistId);
+                    stmt.executeUpdate();
+                }
+
+                connection.commit();
+                return true;
+            } catch (SQLException exception) {
+                connection.rollback();
+                throw new IllegalStateException("Failed to add artist to event", exception);
+            }
         } catch (SQLException exception) {
-            throw new IllegalStateException(
-                    "Failed to add artist to event",
-                    exception);
+            throw new IllegalStateException("Failed to manage database connection for adding artist to event", exception);
         }
     }
 

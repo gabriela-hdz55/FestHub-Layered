@@ -1,1160 +1,2067 @@
 package com.festhub.backend.grpc;
 
 import com.festhub.backend.model.Artist;
+
 import com.festhub.backend.model.BookingCategory;
+
 import com.festhub.backend.model.ConcertEvent;
+
 import com.festhub.backend.model.PromoMedia;
+
 import com.festhub.backend.service.ArtistService;
+
 import com.festhub.backend.service.BookingCategoryService;
+
 import com.festhub.backend.service.ConcertEventService;
+
 import com.festhub.backend.service.PromoMediaService;
+
 import com.festhub.backend.service.RelationshipService;
+
 import com.festhub.proto.ArtistResponse;
+
 import com.festhub.proto.BookingCategoryResponse;
+
 import com.festhub.proto.ConcertEventResponse;
+
 import com.festhub.proto.CreateArtistRequest;
+
 import com.festhub.proto.CreateBookingCategoryRequest;
+
 import com.festhub.proto.CreateConcertEventRequest;
+
 import com.festhub.proto.CreatePromoMediaRequest;
+
 import com.festhub.proto.DeleteResponse;
+
 import com.festhub.proto.EventArtistRequest;
+
 import com.festhub.proto.EventCategoryRequest;
+
 import com.festhub.proto.FestHubGrpc;
+
 import com.festhub.proto.GetByIdRequest;
+
 import com.festhub.proto.ListArtistsResponse;
+
 import com.festhub.proto.ListBookingCategoriesResponse;
+
 import com.festhub.proto.ListConcertEventsResponse;
+
 import com.festhub.proto.ListPromoMediaResponse;
+
 import com.festhub.proto.ListRequest;
+
 import com.festhub.proto.PromoMediaResponse;
+
 import com.festhub.proto.RelationshipResponse;
+
 import com.festhub.proto.UpdateArtistRequest;
+
 import com.festhub.proto.UpdateBookingCategoryRequest;
+
 import com.festhub.proto.UpdateConcertEventRequest;
+
 import com.festhub.proto.UpdatePromoMediaRequest;
 
 import io.grpc.Status;
+
 import io.grpc.stub.StreamObserver;
 
 import java.util.List;
+
 import java.util.NoSuchElementException;
+
 import java.util.Optional;
+
 import java.util.UUID;
 
 public final class FestHubServiceImpl
-        extends FestHubGrpc.FestHubImplBase {
 
-    private final BookingCategoryService bookingCategoryService;
-    private final ArtistService artistService;
-    private final PromoMediaService promoMediaService;
-    private final ConcertEventService concertEventService;
-    private final RelationshipService relationshipService;
+                extends FestHubGrpc.FestHubImplBase {
 
-    public FestHubServiceImpl(
-            BookingCategoryService bookingCategoryService,
-            ArtistService artistService,
-            PromoMediaService promoMediaService,
-            ConcertEventService concertEventService,
-            RelationshipService relationshipService) {
-        this.bookingCategoryService = bookingCategoryService;
-        this.artistService = artistService;
-        this.promoMediaService = promoMediaService;
-        this.concertEventService = concertEventService;
-        this.relationshipService = relationshipService;
-    }
+        private final BookingCategoryService bookingCategoryService;
 
-    @Override
-    public void createBookingCategory(
-            CreateBookingCategoryRequest request,
-            StreamObserver<BookingCategoryResponse> responseObserver) {
-        try {
-            BookingCategory category = bookingCategoryService.create(
-                    request.getName(),
-                    request.getDescription());
+        private final ArtistService artistService;
 
-            responseObserver.onNext(
-                    BookingCategoryResponse.newBuilder()
-                            .setBookingCategory(toProto(category))
-                            .build());
+        private final PromoMediaService promoMediaService;
 
-            responseObserver.onCompleted();
-        } catch (IllegalArgumentException exception) {
-            responseObserver.onError(
-                    Status.INVALID_ARGUMENT
-                            .withDescription(exception.getMessage())
-                            .asRuntimeException());
-        } catch (IllegalStateException exception) {
-            responseObserver.onError(
-                    Status.INTERNAL
-                            .withDescription("Failed to create booking category")
-                            .withCause(exception)
-                            .asRuntimeException());
-        }
-    }
+        private final ConcertEventService concertEventService;
 
-    @Override
-    public void getBookingCategory(
-            GetByIdRequest request,
-            StreamObserver<BookingCategoryResponse> responseObserver) {
-        UUID id;
+        private final RelationshipService relationshipService;
 
-        try {
-            id = UUID.fromString(request.getId());
-        } catch (IllegalArgumentException exception) {
-            responseObserver.onError(
-                    Status.INVALID_ARGUMENT
-                            .withDescription("Invalid booking category ID")
-                            .asRuntimeException());
-            return;
+        public FestHubServiceImpl(
+
+                        BookingCategoryService bookingCategoryService,
+
+                        ArtistService artistService,
+
+                        PromoMediaService promoMediaService,
+
+                        ConcertEventService concertEventService,
+
+                        RelationshipService relationshipService) {
+
+                this.bookingCategoryService = bookingCategoryService;
+
+                this.artistService = artistService;
+
+                this.promoMediaService = promoMediaService;
+
+                this.concertEventService = concertEventService;
+
+                this.relationshipService = relationshipService;
+
         }
 
-        try {
-            Optional<BookingCategory> category = bookingCategoryService.getById(id);
+        @Override
 
-            if (category.isEmpty()) {
-                responseObserver.onError(
-                        Status.NOT_FOUND
-                                .withDescription(
-                                        "Booking category not found")
-                                .asRuntimeException());
-                return;
-            }
+        public void createBookingCategory(
 
-            responseObserver.onNext(
-                    BookingCategoryResponse.newBuilder()
-                            .setBookingCategory(
-                                    toProto(category.get()))
-                            .build());
+                        CreateBookingCategoryRequest request,
 
-            responseObserver.onCompleted();
-        } catch (IllegalStateException exception) {
-            responseObserver.onError(
-                    Status.INTERNAL
-                            .withDescription("Failed to get booking category")
-                            .withCause(exception)
-                            .asRuntimeException());
-        }
-    }
+                        StreamObserver<BookingCategoryResponse> responseObserver) {
 
-    @Override
-    public void listBookingCategories(
-            ListRequest request,
-            StreamObserver<ListBookingCategoriesResponse> responseObserver) {
-        try {
-            ListBookingCategoriesResponse.Builder response = ListBookingCategoriesResponse.newBuilder();
+                try {
 
-            for (BookingCategory category : bookingCategoryService.listAll()) {
-                response.addBookingCategories(toProto(category));
-            }
+                        BookingCategory category = bookingCategoryService.create(
 
-            responseObserver.onNext(response.build());
-            responseObserver.onCompleted();
-        } catch (IllegalStateException exception) {
-            responseObserver.onError(
-                    Status.INTERNAL
-                            .withDescription(
-                                    "Failed to list booking categories")
-                            .withCause(exception)
-                            .asRuntimeException());
-        }
-    }
+                                        request.getName(),
 
-    @Override
-    public void updateBookingCategory(
-            UpdateBookingCategoryRequest request,
-            StreamObserver<BookingCategoryResponse> responseObserver) {
-        UUID id;
+                                        request.getDescription());
 
-        try {
-            id = UUID.fromString(request.getId());
-        } catch (IllegalArgumentException exception) {
-            responseObserver.onError(
-                    Status.INVALID_ARGUMENT
-                            .withDescription("Invalid booking category ID")
-                            .asRuntimeException());
-            return;
+                        responseObserver.onNext(
+
+                                        BookingCategoryResponse.newBuilder()
+
+                                                        .setBookingCategory(toProto(category))
+
+                                                        .build());
+
+                        responseObserver.onCompleted();
+
+                } catch (IllegalArgumentException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.INVALID_ARGUMENT
+
+                                                        .withDescription(exception.getMessage())
+
+                                                        .asRuntimeException());
+
+                } catch (IllegalStateException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.INTERNAL
+
+                                                        .withDescription("Failed to create booking category")
+
+                                                        .withCause(exception)
+
+                                                        .asRuntimeException());
+
+                }
+
         }
 
-        try {
-            Optional<BookingCategory> category = bookingCategoryService.update(
-                    id,
-                    request.getName(),
-                    request.getDescription());
+        @Override
 
-            if (category.isEmpty()) {
-                responseObserver.onError(
-                        Status.NOT_FOUND
-                                .withDescription(
-                                        "Booking category not found")
-                                .asRuntimeException());
-                return;
-            }
+        public void getBookingCategory(
 
-            responseObserver.onNext(
-                    BookingCategoryResponse.newBuilder()
-                            .setBookingCategory(
-                                    toProto(category.get()))
-                            .build());
+                        GetByIdRequest request,
 
-            responseObserver.onCompleted();
-        } catch (IllegalArgumentException exception) {
-            responseObserver.onError(
-                    Status.INVALID_ARGUMENT
-                            .withDescription(exception.getMessage())
-                            .asRuntimeException());
-        } catch (IllegalStateException exception) {
-            responseObserver.onError(
-                    Status.INTERNAL
-                            .withDescription(
-                                    "Failed to update booking category")
-                            .withCause(exception)
-                            .asRuntimeException());
-        }
-    }
+                        StreamObserver<BookingCategoryResponse> responseObserver) {
 
-    @Override
-    public void deleteBookingCategory(
-            GetByIdRequest request,
-            StreamObserver<DeleteResponse> responseObserver) {
-        UUID id;
+                UUID id;
 
-        try {
-            id = UUID.fromString(request.getId());
-        } catch (IllegalArgumentException exception) {
-            responseObserver.onError(
-                    Status.INVALID_ARGUMENT
-                            .withDescription("Invalid booking category ID")
-                            .asRuntimeException());
-            return;
-        }
+                try {
 
-        try {
-            boolean deleted = bookingCategoryService.delete(id);
+                        id = UUID.fromString(request.getId());
 
-            if (!deleted) {
-                responseObserver.onError(
-                        Status.NOT_FOUND
-                                .withDescription(
-                                        "Booking category not found")
-                                .asRuntimeException());
-                return;
-            }
+                } catch (IllegalArgumentException exception) {
 
-            responseObserver.onNext(
-                    DeleteResponse.newBuilder()
-                            .setDeleted(true)
-                            .build());
+                        responseObserver.onError(
 
-            responseObserver.onCompleted();
-        } catch (IllegalStateException exception) {
-            responseObserver.onError(
-                    Status.INTERNAL
-                            .withDescription(
-                                    "Failed to delete booking category")
-                            .withCause(exception)
-                            .asRuntimeException());
-        }
-    }
+                                        Status.INVALID_ARGUMENT
 
-    @Override
-    public void createArtist(
-            CreateArtistRequest request,
-            StreamObserver<ArtistResponse> responseObserver) {
-        try {
-            Artist artist = artistService.create(
-                    request.getName(),
-                    request.getBookingContact());
+                                                        .withDescription("Invalid booking category ID")
 
-            responseObserver.onNext(
-                    ArtistResponse.newBuilder()
-                            .setArtist(toProto(artist))
-                            .build());
+                                                        .asRuntimeException());
 
-            responseObserver.onCompleted();
-        } catch (IllegalArgumentException exception) {
-            responseObserver.onError(
-                    Status.INVALID_ARGUMENT
-                            .withDescription(exception.getMessage())
-                            .asRuntimeException());
-        } catch (IllegalStateException exception) {
-            responseObserver.onError(
-                    Status.INTERNAL
-                            .withDescription("Failed to create artist")
-                            .withCause(exception)
-                            .asRuntimeException());
-        }
-    }
+                        return;
 
-    @Override
-    public void getArtist(
-            GetByIdRequest request,
-            StreamObserver<ArtistResponse> responseObserver) {
-        UUID id;
+                }
 
-        try {
-            id = UUID.fromString(request.getId());
-        } catch (IllegalArgumentException exception) {
-            responseObserver.onError(
-                    Status.INVALID_ARGUMENT
-                            .withDescription("Invalid artist ID")
-                            .asRuntimeException());
-            return;
+                try {
+
+                        Optional<BookingCategory> category = bookingCategoryService.getById(id);
+
+                        if (category.isEmpty()) {
+
+                                responseObserver.onError(
+
+                                                Status.NOT_FOUND
+
+                                                                .withDescription(
+
+                                                                                "Booking category not found")
+
+                                                                .asRuntimeException());
+
+                                return;
+
+                        }
+
+                        responseObserver.onNext(
+
+                                        BookingCategoryResponse.newBuilder()
+
+                                                        .setBookingCategory(
+
+                                                                        toProto(category.get()))
+
+                                                        .build());
+
+                        responseObserver.onCompleted();
+
+                } catch (IllegalStateException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.INTERNAL
+
+                                                        .withDescription("Failed to get booking category")
+
+                                                        .withCause(exception)
+
+                                                        .asRuntimeException());
+
+                }
+
         }
 
-        try {
-            Optional<Artist> artist = artistService.getById(id);
+        @Override
 
-            if (artist.isEmpty()) {
-                responseObserver.onError(
-                        Status.NOT_FOUND
-                                .withDescription(
-                                        "Artist not found")
-                                .asRuntimeException());
-                return;
-            }
+        public void listBookingCategories(
 
-            responseObserver.onNext(
-                    ArtistResponse.newBuilder()
-                            .setArtist(
-                                    toProto(artist.get()))
-                            .build());
+                        ListRequest request,
 
-            responseObserver.onCompleted();
-        } catch (IllegalStateException exception) {
-            responseObserver.onError(
-                    Status.INTERNAL
-                            .withDescription("Failed to get artist")
-                            .withCause(exception)
-                            .asRuntimeException());
-        }
-    }
+                        StreamObserver<ListBookingCategoriesResponse> responseObserver) {
 
-    @Override
-    public void listArtists(
-            ListRequest request,
-            StreamObserver<ListArtistsResponse> responseObserver) {
-        try {
-            ListArtistsResponse.Builder response = ListArtistsResponse.newBuilder();
+                try {
 
-            for (Artist artist : artistService.listAll()) {
-                response.addArtists(toProto(artist));
-            }
+                        ListBookingCategoriesResponse.Builder response = ListBookingCategoriesResponse.newBuilder();
 
-            responseObserver.onNext(response.build());
-            responseObserver.onCompleted();
-        } catch (IllegalStateException exception) {
-            responseObserver.onError(
-                    Status.INTERNAL
-                            .withDescription(
-                                    "Failed to list artists")
-                            .withCause(exception)
-                            .asRuntimeException());
-        }
-    }
+                        for (BookingCategory category : bookingCategoryService.listAll()) {
 
-    @Override
-    public void updateArtist(
-            UpdateArtistRequest request,
-            StreamObserver<ArtistResponse> responseObserver) {
-        UUID id;
+                                response.addBookingCategories(toProto(category));
 
-        try {
-            id = UUID.fromString(request.getId());
-        } catch (IllegalArgumentException exception) {
-            responseObserver.onError(
-                    Status.INVALID_ARGUMENT
-                            .withDescription("Invalid artist ID")
-                            .asRuntimeException());
-            return;
+                        }
+
+                        responseObserver.onNext(response.build());
+
+                        responseObserver.onCompleted();
+
+                } catch (IllegalStateException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.INTERNAL
+
+                                                        .withDescription(
+
+                                                                        "Failed to list booking categories")
+
+                                                        .withCause(exception)
+
+                                                        .asRuntimeException());
+
+                }
+
         }
 
-        try {
-            Optional<Artist> artist = artistService.update(
-                    id,
-                    request.getName(),
-                    request.getBookingContact());
+        @Override
 
-            if (artist.isEmpty()) {
-                responseObserver.onError(
-                        Status.NOT_FOUND
-                                .withDescription(
-                                        "Artist not found")
-                                .asRuntimeException());
-                return;
-            }
+        public void updateBookingCategory(
 
-            responseObserver.onNext(
-                    ArtistResponse.newBuilder()
-                            .setArtist(
-                                    toProto(artist.get()))
-                            .build());
+                        UpdateBookingCategoryRequest request,
 
-            responseObserver.onCompleted();
-        } catch (IllegalArgumentException exception) {
-            responseObserver.onError(
-                    Status.INVALID_ARGUMENT
-                            .withDescription(exception.getMessage())
-                            .asRuntimeException());
-        } catch (IllegalStateException exception) {
-            responseObserver.onError(
-                    Status.INTERNAL
-                            .withDescription(
-                                    "Failed to update artist")
-                            .withCause(exception)
-                            .asRuntimeException());
-        }
-    }
+                        StreamObserver<BookingCategoryResponse> responseObserver) {
 
-    @Override
-    public void deleteArtist(
-            GetByIdRequest request,
-            StreamObserver<DeleteResponse> responseObserver) {
-        UUID id;
+                UUID id;
 
-        try {
-            id = UUID.fromString(request.getId());
-        } catch (IllegalArgumentException exception) {
-            responseObserver.onError(
-                    Status.INVALID_ARGUMENT
-                            .withDescription("Invalid artist ID")
-                            .asRuntimeException());
-            return;
-        }
+                try {
 
-        try {
-            boolean deleted = artistService.delete(id);
+                        id = UUID.fromString(request.getId());
 
-            if (!deleted) {
-                responseObserver.onError(
-                        Status.NOT_FOUND
-                                .withDescription(
-                                        "Artist not found")
-                                .asRuntimeException());
-                return;
-            }
+                } catch (IllegalArgumentException exception) {
 
-            responseObserver.onNext(
-                    DeleteResponse.newBuilder()
-                            .setDeleted(true)
-                            .build());
+                        responseObserver.onError(
 
-            responseObserver.onCompleted();
-        } catch (IllegalStateException exception) {
-            responseObserver.onError(
-                    Status.INTERNAL
-                            .withDescription(
-                                    "Failed to delete artist")
-                            .withCause(exception)
-                            .asRuntimeException());
-        }
-    }
+                                        Status.INVALID_ARGUMENT
 
-    private com.festhub.proto.BookingCategory toProto(
-            BookingCategory category) {
-        List<UUID> eventIds = relationshipService.findEventIdsByCategoryId(category.id());
+                                                        .withDescription("Invalid booking category ID")
 
-        com.festhub.proto.BookingCategory.Builder builder = com.festhub.proto.BookingCategory.newBuilder()
-                .setId(category.id().toString())
-                .setName(category.name())
-                .setDescription(category.description());
+                                                        .asRuntimeException());
 
-        for (UUID eventId : eventIds) {
-            builder.addEventIds(eventId.toString());
-        }
+                        return;
 
-        return builder.build();
-    }
+                }
 
-    private com.festhub.proto.Artist toProto(
-            Artist artist) {
-        List<UUID> eventIds = relationshipService.findEventIdsByArtistId(artist.id());
+                try {
 
-        com.festhub.proto.Artist.Builder builder = com.festhub.proto.Artist.newBuilder()
-                .setId(artist.id().toString())
-                .setName(artist.name())
-                .setBookingContact(artist.bookingContact());
+                        Optional<BookingCategory> category = bookingCategoryService.update(
 
-        for (UUID eventId : eventIds) {
-            builder.addEventIds(eventId.toString());
+                                        id,
+
+                                        request.getName(),
+
+                                        request.getDescription());
+
+                        if (category.isEmpty()) {
+
+                                responseObserver.onError(
+
+                                                Status.NOT_FOUND
+
+                                                                .withDescription(
+
+                                                                                "Booking category not found")
+
+                                                                .asRuntimeException());
+
+                                return;
+
+                        }
+
+                        responseObserver.onNext(
+
+                                        BookingCategoryResponse.newBuilder()
+
+                                                        .setBookingCategory(
+
+                                                                        toProto(category.get()))
+
+                                                        .build());
+
+                        responseObserver.onCompleted();
+
+                } catch (IllegalArgumentException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.INVALID_ARGUMENT
+
+                                                        .withDescription(exception.getMessage())
+
+                                                        .asRuntimeException());
+
+                } catch (IllegalStateException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.INTERNAL
+
+                                                        .withDescription(
+
+                                                                        "Failed to update booking category")
+
+                                                        .withCause(exception)
+
+                                                        .asRuntimeException());
+
+                }
+
         }
 
-        return builder.build();
-    }
+        @Override
 
-    @Override
-    public void createPromoMedia(
-            CreatePromoMediaRequest request,
-            StreamObserver<PromoMediaResponse> responseObserver) {
-        UUID eventId;
+        public void deleteBookingCategory(
 
-        try {
-            eventId = UUID.fromString(request.getEventId());
-        } catch (IllegalArgumentException exception) {
-            responseObserver.onError(
-                    Status.INVALID_ARGUMENT
-                            .withDescription("Invalid event ID")
-                            .asRuntimeException());
-            return;
+                        GetByIdRequest request,
+
+                        StreamObserver<DeleteResponse> responseObserver) {
+
+                UUID id;
+
+                try {
+
+                        id = UUID.fromString(request.getId());
+
+                } catch (IllegalArgumentException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.INVALID_ARGUMENT
+
+                                                        .withDescription("Invalid booking category ID")
+
+                                                        .asRuntimeException());
+
+                        return;
+
+                }
+
+                try {
+
+                        boolean deleted = bookingCategoryService.delete(id);
+
+                        if (!deleted) {
+
+                                responseObserver.onError(
+
+                                                Status.NOT_FOUND
+
+                                                                .withDescription(
+
+                                                                                "Booking category not found")
+
+                                                                .asRuntimeException());
+
+                                return;
+
+                        }
+
+                        responseObserver.onNext(
+
+                                        DeleteResponse.newBuilder()
+
+                                                        .setDeleted(true)
+
+                                                        .build());
+
+                        responseObserver.onCompleted();
+
+                } catch (IllegalStateException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.INTERNAL
+
+                                                        .withDescription(
+
+                                                                        "Failed to delete booking category")
+
+                                                        .withCause(exception)
+
+                                                        .asRuntimeException());
+
+                }
+
         }
 
-        try {
-            PromoMedia promoMedia = promoMediaService.create(
-                    eventId,
-                    request.getImageUrl());
+        @Override
 
-            responseObserver.onNext(
-                    PromoMediaResponse.newBuilder()
-                            .setPromoMedia(toProto(promoMedia))
-                            .build());
+        public void createArtist(
 
-            responseObserver.onCompleted();
-        } catch (IllegalArgumentException exception) {
-            responseObserver.onError(
-                    Status.INVALID_ARGUMENT
-                            .withDescription(exception.getMessage())
-                            .asRuntimeException());
-        } catch (IllegalStateException exception) {
-            responseObserver.onError(
-                    Status.INTERNAL
-                            .withDescription("Failed to create promo media")
-                            .withCause(exception)
-                            .asRuntimeException());
-        }
-    }
+                        CreateArtistRequest request,
 
-    @Override
-    public void getPromoMedia(
-            GetByIdRequest request,
-            StreamObserver<PromoMediaResponse> responseObserver) {
-        UUID id;
+                        StreamObserver<ArtistResponse> responseObserver) {
 
-        try {
-            id = UUID.fromString(request.getId());
-        } catch (IllegalArgumentException exception) {
-            responseObserver.onError(
-                    Status.INVALID_ARGUMENT
-                            .withDescription("Invalid promo media ID")
-                            .asRuntimeException());
-            return;
-        }
+                try {
 
-        try {
-            Optional<PromoMedia> promoMedia = promoMediaService.getById(id);
+                        Artist artist = artistService.create(
 
-            if (promoMedia.isEmpty()) {
-                responseObserver.onError(
-                        Status.NOT_FOUND
-                                .withDescription(
-                                        "Promo media not found")
-                                .asRuntimeException());
-                return;
-            }
+                                        request.getName(),
 
-            responseObserver.onNext(
-                    PromoMediaResponse.newBuilder()
-                            .setPromoMedia(
-                                    toProto(promoMedia.get()))
-                            .build());
+                                        request.getBookingContact());
 
-            responseObserver.onCompleted();
-        } catch (IllegalStateException exception) {
-            responseObserver.onError(
-                    Status.INTERNAL
-                            .withDescription("Failed to get promo media")
-                            .withCause(exception)
-                            .asRuntimeException());
-        }
-    }
+                        responseObserver.onNext(
 
-    @Override
-    public void listPromoMedia(
-            ListRequest request,
-            StreamObserver<ListPromoMediaResponse> responseObserver) {
-        try {
-            ListPromoMediaResponse.Builder response = ListPromoMediaResponse.newBuilder();
+                                        ArtistResponse.newBuilder()
 
-            for (PromoMedia promoMedia : promoMediaService.listAll()) {
-                response.addPromoMedia(toProto(promoMedia));
-            }
+                                                        .setArtist(toProto(artist))
 
-            responseObserver.onNext(response.build());
-            responseObserver.onCompleted();
-        } catch (IllegalStateException exception) {
-            responseObserver.onError(
-                    Status.INTERNAL
-                            .withDescription(
-                                    "Failed to list promo media")
-                            .withCause(exception)
-                            .asRuntimeException());
-        }
-    }
+                                                        .build());
 
-    @Override
-    public void updatePromoMedia(
-            UpdatePromoMediaRequest request,
-            StreamObserver<PromoMediaResponse> responseObserver) {
-        UUID id;
+                        responseObserver.onCompleted();
 
-        try {
-            id = UUID.fromString(request.getId());
-        } catch (IllegalArgumentException exception) {
-            responseObserver.onError(
-                    Status.INVALID_ARGUMENT
-                            .withDescription("Invalid promo media ID")
-                            .asRuntimeException());
-            return;
+                } catch (IllegalArgumentException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.INVALID_ARGUMENT
+
+                                                        .withDescription(exception.getMessage())
+
+                                                        .asRuntimeException());
+
+                } catch (IllegalStateException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.INTERNAL
+
+                                                        .withDescription("Failed to create artist")
+
+                                                        .withCause(exception)
+
+                                                        .asRuntimeException());
+
+                }
+
         }
 
-        UUID eventId;
+        @Override
 
-        try {
-            eventId = UUID.fromString(request.getEventId());
-        } catch (IllegalArgumentException exception) {
-            responseObserver.onError(
-                    Status.INVALID_ARGUMENT
-                            .withDescription("Invalid event ID")
-                            .asRuntimeException());
-            return;
+        public void getArtist(
+
+                        GetByIdRequest request,
+
+                        StreamObserver<ArtistResponse> responseObserver) {
+
+                UUID id;
+
+                try {
+
+                        id = UUID.fromString(request.getId());
+
+                } catch (IllegalArgumentException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.INVALID_ARGUMENT
+
+                                                        .withDescription("Invalid artist ID")
+
+                                                        .asRuntimeException());
+
+                        return;
+
+                }
+
+                try {
+
+                        Optional<Artist> artist = artistService.getById(id);
+
+                        if (artist.isEmpty()) {
+
+                                responseObserver.onError(
+
+                                                Status.NOT_FOUND
+
+                                                                .withDescription(
+
+                                                                                "Artist not found")
+
+                                                                .asRuntimeException());
+
+                                return;
+
+                        }
+
+                        responseObserver.onNext(
+
+                                        ArtistResponse.newBuilder()
+
+                                                        .setArtist(
+
+                                                                        toProto(artist.get()))
+
+                                                        .build());
+
+                        responseObserver.onCompleted();
+
+                } catch (IllegalStateException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.INTERNAL
+
+                                                        .withDescription("Failed to get artist")
+
+                                                        .withCause(exception)
+
+                                                        .asRuntimeException());
+
+                }
+
         }
 
-        try {
-            Optional<PromoMedia> promoMedia = promoMediaService.update(
-                    id,
-                    eventId,
-                    request.getImageUrl());
+        @Override
 
-            if (promoMedia.isEmpty()) {
-                responseObserver.onError(
-                        Status.NOT_FOUND
-                                .withDescription(
-                                        "Promo media not found")
-                                .asRuntimeException());
-                return;
-            }
+        public void listArtists(
 
-            responseObserver.onNext(
-                    PromoMediaResponse.newBuilder()
-                            .setPromoMedia(
-                                    toProto(promoMedia.get()))
-                            .build());
+                        ListRequest request,
 
-            responseObserver.onCompleted();
-        } catch (IllegalArgumentException exception) {
-            responseObserver.onError(
-                    Status.INVALID_ARGUMENT
-                            .withDescription(exception.getMessage())
-                            .asRuntimeException());
-        } catch (IllegalStateException exception) {
-            responseObserver.onError(
-                    Status.INTERNAL
-                            .withDescription(
-                                    "Failed to update promo media")
-                            .withCause(exception)
-                            .asRuntimeException());
-        }
-    }
+                        StreamObserver<ListArtistsResponse> responseObserver) {
 
-    @Override
-    public void deletePromoMedia(
-            GetByIdRequest request,
-            StreamObserver<DeleteResponse> responseObserver) {
-        UUID id;
+                try {
 
-        try {
-            id = UUID.fromString(request.getId());
-        } catch (IllegalArgumentException exception) {
-            responseObserver.onError(
-                    Status.INVALID_ARGUMENT
-                            .withDescription("Invalid promo media ID")
-                            .asRuntimeException());
-            return;
+                        ListArtistsResponse.Builder response = ListArtistsResponse.newBuilder();
+
+                        for (Artist artist : artistService.listAll()) {
+
+                                response.addArtists(toProto(artist));
+
+                        }
+
+                        responseObserver.onNext(response.build());
+
+                        responseObserver.onCompleted();
+
+                } catch (IllegalStateException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.INTERNAL
+
+                                                        .withDescription(
+
+                                                                        "Failed to list artists")
+
+                                                        .withCause(exception)
+
+                                                        .asRuntimeException());
+
+                }
+
         }
 
-        try {
-            boolean deleted = promoMediaService.delete(id);
+        @Override
 
-            if (!deleted) {
-                responseObserver.onError(
-                        Status.NOT_FOUND
-                                .withDescription(
-                                        "Promo media not found")
-                                .asRuntimeException());
-                return;
-            }
+        public void updateArtist(
 
-            responseObserver.onNext(
-                    DeleteResponse.newBuilder()
-                            .setDeleted(true)
-                            .build());
+                        UpdateArtistRequest request,
 
-            responseObserver.onCompleted();
-        } catch (IllegalStateException exception) {
-            responseObserver.onError(
-                    Status.INTERNAL
-                            .withDescription(
-                                    "Failed to delete promo media")
-                            .withCause(exception)
-                            .asRuntimeException());
-        }
-    }
+                        StreamObserver<ArtistResponse> responseObserver) {
 
-    private static com.festhub.proto.PromoMedia toProto(
-            PromoMedia promoMedia) {
-        return com.festhub.proto.PromoMedia.newBuilder()
-                .setId(promoMedia.id().toString())
-                .setEventId(promoMedia.eventId().toString())
-                .setImageUrl(promoMedia.imageUrl())
-                .build();
-    }
+                UUID id;
 
-    @Override
-    public void createConcertEvent(
-            CreateConcertEventRequest request,
-            StreamObserver<ConcertEventResponse> responseObserver) {
-        UUID id = null;
+                try {
 
-        if (request.hasId()) {
-            try {
-                id = UUID.fromString(request.getId());
-            } catch (IllegalArgumentException exception) {
-                responseObserver.onError(
-                        Status.INVALID_ARGUMENT
-                                .withDescription("Invalid concert event ID")
-                                .asRuntimeException());
-                return;
-            }
-        }
+                        id = UUID.fromString(request.getId());
 
-        try {
-            ConcertEvent event = concertEventService.create(
-                    id,
-                    request.getName(),
-                    request.getDescription(),
-                    request.getAvailableTickets(),
-                    request.getTicketPriceCents());
+                } catch (IllegalArgumentException exception) {
 
-            responseObserver.onNext(
-                    ConcertEventResponse.newBuilder()
-                            .setConcertEvent(toProto(event))
-                            .build());
+                        responseObserver.onError(
 
-            responseObserver.onCompleted();
-        } catch (IllegalArgumentException exception) {
-            responseObserver.onError(
-                    Status.INVALID_ARGUMENT
-                            .withDescription(exception.getMessage())
-                            .asRuntimeException());
-        } catch (IllegalStateException exception) {
-            responseObserver.onError(
-                    Status.INTERNAL
-                            .withDescription("Failed to create concert event")
-                            .withCause(exception)
-                            .asRuntimeException());
-        }
-    }
+                                        Status.INVALID_ARGUMENT
 
-    @Override
-    public void getConcertEvent(
-            GetByIdRequest request,
-            StreamObserver<ConcertEventResponse> responseObserver) {
-        UUID id;
+                                                        .withDescription("Invalid artist ID")
 
-        try {
-            id = UUID.fromString(request.getId());
-        } catch (IllegalArgumentException exception) {
-            responseObserver.onError(
-                    Status.INVALID_ARGUMENT
-                            .withDescription("Invalid concert event ID")
-                            .asRuntimeException());
-            return;
+                                                        .asRuntimeException());
+
+                        return;
+
+                }
+
+                try {
+
+                        Optional<Artist> artist = artistService.update(
+
+                                        id,
+
+                                        request.getName(),
+
+                                        request.getBookingContact());
+
+                        if (artist.isEmpty()) {
+
+                                responseObserver.onError(
+
+                                                Status.NOT_FOUND
+
+                                                                .withDescription(
+
+                                                                                "Artist not found")
+
+                                                                .asRuntimeException());
+
+                                return;
+
+                        }
+
+                        responseObserver.onNext(
+
+                                        ArtistResponse.newBuilder()
+
+                                                        .setArtist(
+
+                                                                        toProto(artist.get()))
+
+                                                        .build());
+
+                        responseObserver.onCompleted();
+
+                } catch (IllegalArgumentException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.INVALID_ARGUMENT
+
+                                                        .withDescription(exception.getMessage())
+
+                                                        .asRuntimeException());
+
+                } catch (IllegalStateException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.INTERNAL
+
+                                                        .withDescription(
+
+                                                                        "Failed to update artist")
+
+                                                        .withCause(exception)
+
+                                                        .asRuntimeException());
+
+                }
+
         }
 
-        try {
-            Optional<ConcertEvent> event = concertEventService.getById(id);
+        @Override
 
-            if (event.isEmpty()) {
-                responseObserver.onError(
-                        Status.NOT_FOUND
-                                .withDescription(
-                                        "Concert event not found")
-                                .asRuntimeException());
-                return;
-            }
+        public void deleteArtist(
 
-            responseObserver.onNext(
-                    ConcertEventResponse.newBuilder()
-                            .setConcertEvent(
-                                    toProto(event.get()))
-                            .build());
+                        GetByIdRequest request,
 
-            responseObserver.onCompleted();
-        } catch (IllegalStateException exception) {
-            responseObserver.onError(
-                    Status.INTERNAL
-                            .withDescription("Failed to get concert event")
-                            .withCause(exception)
-                            .asRuntimeException());
-        }
-    }
+                        StreamObserver<DeleteResponse> responseObserver) {
 
-    @Override
-    public void listConcertEvents(
-            ListRequest request,
-            StreamObserver<ListConcertEventsResponse> responseObserver) {
-        try {
-            ListConcertEventsResponse.Builder response = ListConcertEventsResponse.newBuilder();
+                UUID id;
 
-            for (ConcertEvent event : concertEventService.listAll()) {
-                response.addConcertEvents(toProto(event));
-            }
+                try {
 
-            responseObserver.onNext(response.build());
-            responseObserver.onCompleted();
-        } catch (IllegalStateException exception) {
-            responseObserver.onError(
-                    Status.INTERNAL
-                            .withDescription(
-                                    "Failed to list concert events")
-                            .withCause(exception)
-                            .asRuntimeException());
-        }
-    }
+                        id = UUID.fromString(request.getId());
 
-    @Override
-    public void updateConcertEvent(
-            UpdateConcertEventRequest request,
-            StreamObserver<ConcertEventResponse> responseObserver) {
-        UUID id;
+                } catch (IllegalArgumentException exception) {
 
-        try {
-            id = UUID.fromString(request.getId());
-        } catch (IllegalArgumentException exception) {
-            responseObserver.onError(
-                    Status.INVALID_ARGUMENT
-                            .withDescription("Invalid concert event ID")
-                            .asRuntimeException());
-            return;
-        }
+                        responseObserver.onError(
 
-        Optional<String> name = request.hasName()
-                ? Optional.of(request.getName())
-                : Optional.empty();
-        Optional<String> description = request.hasDescription()
-                ? Optional.of(request.getDescription())
-                : Optional.empty();
-        Optional<Integer> availableTickets = request.hasAvailableTickets()
-                ? Optional.of(request.getAvailableTickets())
-                : Optional.empty();
-        Optional<Long> ticketPriceCents = request.hasTicketPriceCents()
-                ? Optional.of(request.getTicketPriceCents())
-                : Optional.empty();
+                                        Status.INVALID_ARGUMENT
 
-        try {
-            Optional<ConcertEvent> event = concertEventService.update(
-                    id,
-                    name,
-                    description,
-                    availableTickets,
-                    ticketPriceCents);
+                                                        .withDescription("Invalid artist ID")
 
-            if (event.isEmpty()) {
-                responseObserver.onError(
-                        Status.NOT_FOUND
-                                .withDescription(
-                                        "Concert event not found")
-                                .asRuntimeException());
-                return;
-            }
+                                                        .asRuntimeException());
 
-            responseObserver.onNext(
-                    ConcertEventResponse.newBuilder()
-                            .setConcertEvent(
-                                    toProto(event.get()))
-                            .build());
+                        return;
 
-            responseObserver.onCompleted();
-        } catch (IllegalArgumentException exception) {
-            responseObserver.onError(
-                    Status.INVALID_ARGUMENT
-                            .withDescription(exception.getMessage())
-                            .asRuntimeException());
-        } catch (IllegalStateException exception) {
-            responseObserver.onError(
-                    Status.INTERNAL
-                            .withDescription(
-                                    "Failed to update concert event")
-                            .withCause(exception)
-                            .asRuntimeException());
-        }
-    }
+                }
 
-    @Override
-    public void deleteConcertEvent(
-            GetByIdRequest request,
-            StreamObserver<DeleteResponse> responseObserver) {
-        UUID id;
+                try {
 
-        try {
-            id = UUID.fromString(request.getId());
-        } catch (IllegalArgumentException exception) {
-            responseObserver.onError(
-                    Status.INVALID_ARGUMENT
-                            .withDescription("Invalid concert event ID")
-                            .asRuntimeException());
-            return;
+                        boolean deleted = artistService.delete(id);
+
+                        if (!deleted) {
+
+                                responseObserver.onError(
+
+                                                Status.NOT_FOUND
+
+                                                                .withDescription(
+
+                                                                                "Artist not found")
+
+                                                                .asRuntimeException());
+
+                                return;
+
+                        }
+
+                        responseObserver.onNext(
+
+                                        DeleteResponse.newBuilder()
+
+                                                        .setDeleted(true)
+
+                                                        .build());
+
+                        responseObserver.onCompleted();
+
+                } catch (IllegalStateException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.INTERNAL
+
+                                                        .withDescription(
+
+                                                                        "Failed to delete artist")
+
+                                                        .withCause(exception)
+
+                                                        .asRuntimeException());
+
+                }
+
         }
 
-        try {
-            boolean deleted = concertEventService.delete(id);
+        private com.festhub.proto.BookingCategory toProto(
 
-            if (!deleted) {
-                responseObserver.onError(
-                        Status.NOT_FOUND
-                                .withDescription(
-                                        "Concert event not found")
-                                .asRuntimeException());
-                return;
-            }
+                        BookingCategory category) {
 
-            responseObserver.onNext(
-                    DeleteResponse.newBuilder()
-                            .setDeleted(true)
-                            .build());
+                List<UUID> eventIds = relationshipService.findEventIdsByCategoryId(category.id());
 
-            responseObserver.onCompleted();
-        } catch (IllegalStateException exception) {
-            responseObserver.onError(
-                    Status.INTERNAL
-                            .withDescription(
-                                    "Failed to delete concert event")
-                            .withCause(exception)
-                            .asRuntimeException());
-        }
-    }
+                com.festhub.proto.BookingCategory.Builder builder = com.festhub.proto.BookingCategory.newBuilder()
 
-    private com.festhub.proto.ConcertEvent toProto(
-            ConcertEvent event) {
-        List<UUID> artistIds = relationshipService.findArtistIdsByEventId(event.id());
-        List<UUID> categoryIds = relationshipService.findCategoryIdsByEventId(event.id());
-        List<UUID> promoMediaIds = relationshipService.findPromoMediaIdsByEventId(event.id());
+                                .setId(category.id().toString())
 
-        com.festhub.proto.ConcertEvent.Builder builder = com.festhub.proto.ConcertEvent.newBuilder()
-                .setId(event.id().toString())
-                .setName(event.name())
-                .setDescription(event.description())
-                .setAvailableTickets(event.availableTickets())
-                .setTicketPriceCents(event.ticketPriceCents());
+                                .setName(category.name())
 
-        for (UUID artistId : artistIds) {
-            builder.addArtistIds(artistId.toString());
-        }
-        for (UUID categoryId : categoryIds) {
-            builder.addCategoryIds(categoryId.toString());
-        }
-        for (UUID promoMediaId : promoMediaIds) {
-            builder.addPromoMediaIds(promoMediaId.toString());
+                                .setDescription(category.description());
+
+                for (UUID eventId : eventIds) {
+
+                        builder.addEventIds(eventId.toString());
+
+                }
+
+                return builder.build();
+
         }
 
-        return builder.build();
-    }
+        private com.festhub.proto.Artist toProto(
 
-    @Override
-    public void addArtistToEvent(
-            EventArtistRequest request,
-            StreamObserver<RelationshipResponse> responseObserver) {
-        UUID eventId;
-        UUID artistId;
+                        Artist artist) {
 
-        try {
-            eventId = UUID.fromString(request.getEventId());
-        } catch (IllegalArgumentException exception) {
-            responseObserver.onError(
-                    Status.INVALID_ARGUMENT
-                            .withDescription("Invalid event ID")
-                            .asRuntimeException());
-            return;
+                List<UUID> eventIds = relationshipService.findEventIdsByArtistId(artist.id());
+
+                com.festhub.proto.Artist.Builder builder = com.festhub.proto.Artist.newBuilder()
+
+                                .setId(artist.id().toString())
+
+                                .setName(artist.name())
+
+                                .setBookingContact(artist.bookingContact());
+
+                for (UUID eventId : eventIds) {
+
+                        builder.addEventIds(eventId.toString());
+
+                }
+
+                return builder.build();
+
         }
 
-        try {
-            artistId = UUID.fromString(request.getArtistId());
-        } catch (IllegalArgumentException exception) {
-            responseObserver.onError(
-                    Status.INVALID_ARGUMENT
-                            .withDescription("Invalid artist ID")
-                            .asRuntimeException());
-            return;
+        @Override
+
+        public void createPromoMedia(
+
+                        CreatePromoMediaRequest request,
+
+                        StreamObserver<PromoMediaResponse> responseObserver) {
+
+                UUID eventId;
+
+                try {
+
+                        eventId = UUID.fromString(request.getEventId());
+
+                } catch (IllegalArgumentException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.INVALID_ARGUMENT
+
+                                                        .withDescription("Invalid event ID")
+
+                                                        .asRuntimeException());
+
+                        return;
+
+                }
+
+                try {
+
+                        PromoMedia promoMedia = promoMediaService.create(
+
+                                        eventId,
+
+                                        request.getImageUrl());
+
+                        responseObserver.onNext(
+
+                                        PromoMediaResponse.newBuilder()
+
+                                                        .setPromoMedia(toProto(promoMedia))
+
+                                                        .build());
+
+                        responseObserver.onCompleted();
+
+                } catch (IllegalArgumentException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.INVALID_ARGUMENT
+
+                                                        .withDescription(exception.getMessage())
+
+                                                        .asRuntimeException());
+
+                } catch (IllegalStateException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.INTERNAL
+
+                                                        .withDescription("Failed to create promo media")
+
+                                                        .withCause(exception)
+
+                                                        .asRuntimeException());
+
+                }
+
         }
 
-        try {
-            boolean changed = relationshipService.addArtistToEvent(eventId, artistId);
+        @Override
 
-            responseObserver.onNext(
-                    RelationshipResponse.newBuilder()
-                            .setChanged(changed)
-                            .build());
+        public void getPromoMedia(
 
-            responseObserver.onCompleted();
-        } catch (NoSuchElementException exception) {
-            responseObserver.onError(
-                    Status.NOT_FOUND
-                            .withDescription(exception.getMessage())
-                            .asRuntimeException());
-        } catch (IllegalStateException exception) {
-            responseObserver.onError(
-                    Status.INTERNAL
-                            .withDescription("Failed to add artist to event")
-                            .withCause(exception)
-                            .asRuntimeException());
-        }
-    }
+                        GetByIdRequest request,
 
-    @Override
-    public void removeArtistFromEvent(
-            EventArtistRequest request,
-            StreamObserver<RelationshipResponse> responseObserver) {
-        UUID eventId;
-        UUID artistId;
+                        StreamObserver<PromoMediaResponse> responseObserver) {
 
-        try {
-            eventId = UUID.fromString(request.getEventId());
-        } catch (IllegalArgumentException exception) {
-            responseObserver.onError(
-                    Status.INVALID_ARGUMENT
-                            .withDescription("Invalid event ID")
-                            .asRuntimeException());
-            return;
-        }
+                UUID id;
 
-        try {
-            artistId = UUID.fromString(request.getArtistId());
-        } catch (IllegalArgumentException exception) {
-            responseObserver.onError(
-                    Status.INVALID_ARGUMENT
-                            .withDescription("Invalid artist ID")
-                            .asRuntimeException());
-            return;
-        }
+                try {
 
-        try {
-            boolean changed = relationshipService.removeArtistFromEvent(eventId, artistId);
+                        id = UUID.fromString(request.getId());
 
-            responseObserver.onNext(
-                    RelationshipResponse.newBuilder()
-                            .setChanged(changed)
-                            .build());
+                } catch (IllegalArgumentException exception) {
 
-            responseObserver.onCompleted();
-        } catch (NoSuchElementException exception) {
-            responseObserver.onError(
-                    Status.NOT_FOUND
-                            .withDescription(exception.getMessage())
-                            .asRuntimeException());
-        } catch (IllegalStateException exception) {
-            responseObserver.onError(
-                    Status.INTERNAL
-                            .withDescription("Failed to remove artist from event")
-                            .withCause(exception)
-                            .asRuntimeException());
-        }
-    }
+                        responseObserver.onError(
 
-    @Override
-    public void addCategoryToEvent(
-            EventCategoryRequest request,
-            StreamObserver<RelationshipResponse> responseObserver) {
-        UUID eventId;
-        UUID categoryId;
+                                        Status.INVALID_ARGUMENT
 
-        try {
-            eventId = UUID.fromString(request.getEventId());
-        } catch (IllegalArgumentException exception) {
-            responseObserver.onError(
-                    Status.INVALID_ARGUMENT
-                            .withDescription("Invalid event ID")
-                            .asRuntimeException());
-            return;
+                                                        .withDescription("Invalid promo media ID")
+
+                                                        .asRuntimeException());
+
+                        return;
+
+                }
+
+                try {
+
+                        Optional<PromoMedia> promoMedia = promoMediaService.getById(id);
+
+                        if (promoMedia.isEmpty()) {
+
+                                responseObserver.onError(
+
+                                                Status.NOT_FOUND
+
+                                                                .withDescription(
+
+                                                                                "Promo media not found")
+
+                                                                .asRuntimeException());
+
+                                return;
+
+                        }
+
+                        responseObserver.onNext(
+
+                                        PromoMediaResponse.newBuilder()
+
+                                                        .setPromoMedia(
+
+                                                                        toProto(promoMedia.get()))
+
+                                                        .build());
+
+                        responseObserver.onCompleted();
+
+                } catch (IllegalStateException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.INTERNAL
+
+                                                        .withDescription("Failed to get promo media")
+
+                                                        .withCause(exception)
+
+                                                        .asRuntimeException());
+
+                }
+
         }
 
-        try {
-            categoryId = UUID.fromString(request.getCategoryId());
-        } catch (IllegalArgumentException exception) {
-            responseObserver.onError(
-                    Status.INVALID_ARGUMENT
-                            .withDescription("Invalid category ID")
-                            .asRuntimeException());
-            return;
+        @Override
+
+        public void listPromoMedia(
+
+                        ListRequest request,
+
+                        StreamObserver<ListPromoMediaResponse> responseObserver) {
+
+                try {
+
+                        ListPromoMediaResponse.Builder response = ListPromoMediaResponse.newBuilder();
+
+                        for (PromoMedia promoMedia : promoMediaService.listAll()) {
+
+                                response.addPromoMedia(toProto(promoMedia));
+
+                        }
+
+                        responseObserver.onNext(response.build());
+
+                        responseObserver.onCompleted();
+
+                } catch (IllegalStateException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.INTERNAL
+
+                                                        .withDescription(
+
+                                                                        "Failed to list promo media")
+
+                                                        .withCause(exception)
+
+                                                        .asRuntimeException());
+
+                }
+
         }
 
-        try {
-            boolean changed = relationshipService.addCategoryToEvent(eventId, categoryId);
+        @Override
 
-            responseObserver.onNext(
-                    RelationshipResponse.newBuilder()
-                            .setChanged(changed)
-                            .build());
+        public void updatePromoMedia(
 
-            responseObserver.onCompleted();
-        } catch (NoSuchElementException exception) {
-            responseObserver.onError(
-                    Status.NOT_FOUND
-                            .withDescription(exception.getMessage())
-                            .asRuntimeException());
-        } catch (IllegalStateException exception) {
-            responseObserver.onError(
-                    Status.INTERNAL
-                            .withDescription("Failed to add category to event")
-                            .withCause(exception)
-                            .asRuntimeException());
+                        UpdatePromoMediaRequest request,
+
+                        StreamObserver<PromoMediaResponse> responseObserver) {
+
+                UUID id;
+
+                try {
+
+                        id = UUID.fromString(request.getId());
+
+                } catch (IllegalArgumentException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.INVALID_ARGUMENT
+
+                                                        .withDescription("Invalid promo media ID")
+
+                                                        .asRuntimeException());
+
+                        return;
+
+                }
+
+                UUID eventId;
+
+                try {
+
+                        eventId = UUID.fromString(request.getEventId());
+
+                } catch (IllegalArgumentException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.INVALID_ARGUMENT
+
+                                                        .withDescription("Invalid event ID")
+
+                                                        .asRuntimeException());
+
+                        return;
+
+                }
+
+                try {
+
+                        Optional<PromoMedia> promoMedia = promoMediaService.update(
+
+                                        id,
+
+                                        eventId,
+
+                                        request.getImageUrl());
+
+                        if (promoMedia.isEmpty()) {
+
+                                responseObserver.onError(
+
+                                                Status.NOT_FOUND
+
+                                                                .withDescription(
+
+                                                                                "Promo media not found")
+
+                                                                .asRuntimeException());
+
+                                return;
+
+                        }
+
+                        responseObserver.onNext(
+
+                                        PromoMediaResponse.newBuilder()
+
+                                                        .setPromoMedia(
+
+                                                                        toProto(promoMedia.get()))
+
+                                                        .build());
+
+                        responseObserver.onCompleted();
+
+                } catch (IllegalArgumentException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.INVALID_ARGUMENT
+
+                                                        .withDescription(exception.getMessage())
+
+                                                        .asRuntimeException());
+
+                } catch (IllegalStateException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.INTERNAL
+
+                                                        .withDescription(
+
+                                                                        "Failed to update promo media")
+
+                                                        .withCause(exception)
+
+                                                        .asRuntimeException());
+
+                }
+
         }
-    }
 
-    @Override
-    public void removeCategoryFromEvent(
-            EventCategoryRequest request,
-            StreamObserver<RelationshipResponse> responseObserver) {
-        UUID eventId;
-        UUID categoryId;
+        @Override
 
-        try {
-            eventId = UUID.fromString(request.getEventId());
-        } catch (IllegalArgumentException exception) {
-            responseObserver.onError(
-                    Status.INVALID_ARGUMENT
-                            .withDescription("Invalid event ID")
-                            .asRuntimeException());
-            return;
+        public void deletePromoMedia(
+
+                        GetByIdRequest request,
+
+                        StreamObserver<DeleteResponse> responseObserver) {
+
+                UUID id;
+
+                try {
+
+                        id = UUID.fromString(request.getId());
+
+                } catch (IllegalArgumentException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.INVALID_ARGUMENT
+
+                                                        .withDescription("Invalid promo media ID")
+
+                                                        .asRuntimeException());
+
+                        return;
+
+                }
+
+                try {
+
+                        boolean deleted = promoMediaService.delete(id);
+
+                        if (!deleted) {
+
+                                responseObserver.onError(
+
+                                                Status.NOT_FOUND
+
+                                                                .withDescription(
+
+                                                                                "Promo media not found")
+
+                                                                .asRuntimeException());
+
+                                return;
+
+                        }
+
+                        responseObserver.onNext(
+
+                                        DeleteResponse.newBuilder()
+
+                                                        .setDeleted(true)
+
+                                                        .build());
+
+                        responseObserver.onCompleted();
+
+                } catch (IllegalStateException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.INTERNAL
+
+                                                        .withDescription(
+
+                                                                        "Failed to delete promo media")
+
+                                                        .withCause(exception)
+
+                                                        .asRuntimeException());
+
+                }
+
         }
 
-        try {
-            categoryId = UUID.fromString(request.getCategoryId());
-        } catch (IllegalArgumentException exception) {
-            responseObserver.onError(
-                    Status.INVALID_ARGUMENT
-                            .withDescription("Invalid category ID")
-                            .asRuntimeException());
-            return;
+        private static com.festhub.proto.PromoMedia toProto(
+
+                        PromoMedia promoMedia) {
+
+                return com.festhub.proto.PromoMedia.newBuilder()
+
+                                .setId(promoMedia.id().toString())
+
+                                .setEventId(promoMedia.eventId().toString())
+
+                                .setImageUrl(promoMedia.imageUrl())
+
+                                .build();
+
         }
 
-        try {
-            boolean changed = relationshipService.removeCategoryFromEvent(eventId, categoryId);
+        @Override
 
-            responseObserver.onNext(
-                    RelationshipResponse.newBuilder()
-                            .setChanged(changed)
-                            .build());
+        public void createConcertEvent(
 
-            responseObserver.onCompleted();
-        } catch (NoSuchElementException exception) {
-            responseObserver.onError(
-                    Status.NOT_FOUND
-                            .withDescription(exception.getMessage())
-                            .asRuntimeException());
-        } catch (IllegalStateException exception) {
-            responseObserver.onError(
-                    Status.INTERNAL
-                            .withDescription("Failed to remove category from event")
-                            .withCause(exception)
-                            .asRuntimeException());
+                        CreateConcertEventRequest request,
+
+                        StreamObserver<ConcertEventResponse> responseObserver) {
+
+                UUID id = null;
+
+                if (request.hasId()) {
+
+                        try {
+
+                                id = UUID.fromString(request.getId());
+
+                        } catch (IllegalArgumentException exception) {
+
+                                responseObserver.onError(
+
+                                                Status.INVALID_ARGUMENT
+
+                                                                .withDescription("Invalid concert event ID")
+
+                                                                .asRuntimeException());
+
+                                return;
+
+                        }
+
+                }
+
+                try {
+
+                        ConcertEvent event = concertEventService.create(
+
+                                        id,
+
+                                        request.getName(),
+
+                                        request.getDescription(),
+
+                                        request.getAvailableTickets(),
+
+                                        request.getTicketPriceCents());
+
+                        responseObserver.onNext(
+
+                                        ConcertEventResponse.newBuilder()
+
+                                                        .setConcertEvent(toProto(event))
+
+                                                        .build());
+
+                        responseObserver.onCompleted();
+
+                } catch (IllegalArgumentException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.INVALID_ARGUMENT
+
+                                                        .withDescription(exception.getMessage())
+
+                                                        .asRuntimeException());
+
+                } catch (IllegalStateException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.INTERNAL
+
+                                                        .withDescription("Failed to create concert event")
+
+                                                        .withCause(exception)
+
+                                                        .asRuntimeException());
+
+                }
+
         }
-    }
+
+        @Override
+
+        public void getConcertEvent(
+
+                        GetByIdRequest request,
+
+                        StreamObserver<ConcertEventResponse> responseObserver) {
+
+                UUID id;
+
+                try {
+
+                        id = UUID.fromString(request.getId());
+
+                } catch (IllegalArgumentException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.INVALID_ARGUMENT
+
+                                                        .withDescription("Invalid concert event ID")
+
+                                                        .asRuntimeException());
+
+                        return;
+
+                }
+
+                try {
+
+                        Optional<ConcertEvent> event = concertEventService.getById(id);
+
+                        if (event.isEmpty()) {
+
+                                responseObserver.onError(
+
+                                                Status.NOT_FOUND
+
+                                                                .withDescription(
+
+                                                                                "Concert event not found")
+
+                                                                .asRuntimeException());
+
+                                return;
+
+                        }
+
+                        responseObserver.onNext(
+
+                                        ConcertEventResponse.newBuilder()
+
+                                                        .setConcertEvent(
+
+                                                                        toProto(event.get()))
+
+                                                        .build());
+
+                        responseObserver.onCompleted();
+
+                } catch (IllegalStateException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.INTERNAL
+
+                                                        .withDescription("Failed to get concert event")
+
+                                                        .withCause(exception)
+
+                                                        .asRuntimeException());
+
+                }
+
+        }
+
+        @Override
+
+        public void listConcertEvents(
+
+                        ListRequest request,
+
+                        StreamObserver<ListConcertEventsResponse> responseObserver) {
+
+                try {
+
+                        ListConcertEventsResponse.Builder response = ListConcertEventsResponse.newBuilder();
+
+                        for (ConcertEvent event : concertEventService.listAll()) {
+
+                                response.addConcertEvents(toProto(event));
+
+                        }
+
+                        responseObserver.onNext(response.build());
+
+                        responseObserver.onCompleted();
+
+                } catch (IllegalStateException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.INTERNAL
+
+                                                        .withDescription(
+
+                                                                        "Failed to list concert events")
+
+                                                        .withCause(exception)
+
+                                                        .asRuntimeException());
+
+                }
+
+        }
+
+        @Override
+
+        public void updateConcertEvent(
+
+                        UpdateConcertEventRequest request,
+
+                        StreamObserver<ConcertEventResponse> responseObserver) {
+
+                UUID id;
+
+                try {
+
+                        id = UUID.fromString(request.getId());
+
+                } catch (IllegalArgumentException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.INVALID_ARGUMENT
+
+                                                        .withDescription("Invalid concert event ID")
+
+                                                        .asRuntimeException());
+
+                        return;
+
+                }
+
+                Optional<String> name = request.hasName()
+
+                                ? Optional.of(request.getName())
+
+                                : Optional.empty();
+
+                Optional<String> description = request.hasDescription()
+
+                                ? Optional.of(request.getDescription())
+
+                                : Optional.empty();
+
+                Optional<Integer> availableTickets = request.hasAvailableTickets()
+
+                                ? Optional.of(request.getAvailableTickets())
+
+                                : Optional.empty();
+
+                Optional<Long> ticketPriceCents = request.hasTicketPriceCents()
+
+                                ? Optional.of(request.getTicketPriceCents())
+
+                                : Optional.empty();
+
+                try {
+
+                        Optional<ConcertEvent> event = concertEventService.update(
+
+                                        id,
+
+                                        name,
+
+                                        description,
+
+                                        availableTickets,
+
+                                        ticketPriceCents);
+
+                        if (event.isEmpty()) {
+
+                                responseObserver.onError(
+
+                                                Status.NOT_FOUND
+
+                                                                .withDescription(
+
+                                                                                "Concert event not found")
+
+                                                                .asRuntimeException());
+
+                                return;
+
+                        }
+
+                        responseObserver.onNext(
+
+                                        ConcertEventResponse.newBuilder()
+
+                                                        .setConcertEvent(
+
+                                                                        toProto(event.get()))
+
+                                                        .build());
+
+                        responseObserver.onCompleted();
+
+                } catch (IllegalArgumentException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.INVALID_ARGUMENT
+
+                                                        .withDescription(exception.getMessage())
+
+                                                        .asRuntimeException());
+
+                } catch (IllegalStateException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.INTERNAL
+
+                                                        .withDescription(
+
+                                                                        "Failed to update concert event")
+
+                                                        .withCause(exception)
+
+                                                        .asRuntimeException());
+
+                }
+
+        }
+
+        @Override
+
+        public void deleteConcertEvent(
+
+                        GetByIdRequest request,
+
+                        StreamObserver<DeleteResponse> responseObserver) {
+
+                UUID id;
+
+                try {
+
+                        id = UUID.fromString(request.getId());
+
+                } catch (IllegalArgumentException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.INVALID_ARGUMENT
+
+                                                        .withDescription("Invalid concert event ID")
+
+                                                        .asRuntimeException());
+
+                        return;
+
+                }
+
+                try {
+
+                        boolean deleted = concertEventService.delete(id);
+
+                        if (!deleted) {
+
+                                responseObserver.onError(
+
+                                                Status.NOT_FOUND
+
+                                                                .withDescription(
+
+                                                                                "Concert event not found")
+
+                                                                .asRuntimeException());
+
+                                return;
+
+                        }
+
+                        responseObserver.onNext(
+
+                                        DeleteResponse.newBuilder()
+
+                                                        .setDeleted(true)
+
+                                                        .build());
+
+                        responseObserver.onCompleted();
+
+                } catch (IllegalStateException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.INTERNAL
+
+                                                        .withDescription(
+
+                                                                        "Failed to delete concert event")
+
+                                                        .withCause(exception)
+
+                                                        .asRuntimeException());
+
+                }
+
+        }
+
+        private com.festhub.proto.ConcertEvent toProto(
+
+                        ConcertEvent event) {
+
+                List<UUID> artistIds = relationshipService.findArtistIdsByEventId(event.id());
+
+                List<UUID> categoryIds = relationshipService.findCategoryIdsByEventId(event.id());
+
+                List<UUID> promoMediaIds = relationshipService.findPromoMediaIdsByEventId(event.id());
+
+                com.festhub.proto.ConcertEvent.Builder builder = com.festhub.proto.ConcertEvent.newBuilder()
+
+                                .setId(event.id().toString())
+
+                                .setName(event.name())
+
+                                .setDescription(event.description())
+
+                                .setAvailableTickets(event.availableTickets())
+
+                                .setTicketPriceCents(event.ticketPriceCents());
+
+                for (UUID artistId : artistIds) {
+
+                        builder.addArtistIds(artistId.toString());
+
+                }
+
+                for (UUID categoryId : categoryIds) {
+
+                        builder.addCategoryIds(categoryId.toString());
+
+                }
+
+                for (UUID promoMediaId : promoMediaIds) {
+
+                        builder.addPromoMediaIds(promoMediaId.toString());
+
+                }
+
+                return builder.build();
+
+        }
+
+        @Override
+
+        public void addArtistToEvent(
+
+                        EventArtistRequest request,
+
+                        StreamObserver<RelationshipResponse> responseObserver) {
+
+                UUID eventId;
+
+                UUID artistId;
+
+                try {
+
+                        eventId = UUID.fromString(request.getEventId());
+
+                } catch (IllegalArgumentException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.INVALID_ARGUMENT
+
+                                                        .withDescription("Invalid event ID")
+
+                                                        .asRuntimeException());
+
+                        return;
+
+                }
+
+                try {
+
+                        artistId = UUID.fromString(request.getArtistId());
+
+                } catch (IllegalArgumentException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.INVALID_ARGUMENT
+
+                                                        .withDescription("Invalid artist ID")
+
+                                                        .asRuntimeException());
+
+                        return;
+
+                }
+
+                try {
+
+                        boolean changed = relationshipService.addArtistToEvent(eventId, artistId);
+
+                        responseObserver.onNext(
+
+                                        RelationshipResponse.newBuilder()
+
+                                                        .setChanged(changed)
+
+                                                        .build());
+
+                        responseObserver.onCompleted();
+
+                } catch (NoSuchElementException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.NOT_FOUND
+
+                                                        .withDescription(exception.getMessage())
+
+                                                        .asRuntimeException());
+
+                } catch (IllegalArgumentException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.INVALID_ARGUMENT
+
+                                                        .withDescription(exception.getMessage())
+
+                                                        .asRuntimeException());
+
+                } catch (IllegalStateException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.INTERNAL
+
+                                                        .withDescription("Failed to add artist to event")
+
+                                                        .withCause(exception)
+
+                                                        .asRuntimeException());
+
+                }
+
+        }
+
+        @Override
+
+        public void removeArtistFromEvent(
+
+                        EventArtistRequest request,
+
+                        StreamObserver<RelationshipResponse> responseObserver) {
+
+                UUID eventId;
+
+                UUID artistId;
+
+                try {
+
+                        eventId = UUID.fromString(request.getEventId());
+
+                } catch (IllegalArgumentException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.INVALID_ARGUMENT
+
+                                                        .withDescription("Invalid event ID")
+
+                                                        .asRuntimeException());
+
+                        return;
+
+                }
+
+                try {
+
+                        artistId = UUID.fromString(request.getArtistId());
+
+                } catch (IllegalArgumentException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.INVALID_ARGUMENT
+
+                                                        .withDescription("Invalid artist ID")
+
+                                                        .asRuntimeException());
+
+                        return;
+
+                }
+
+                try {
+
+                        boolean changed = relationshipService.removeArtistFromEvent(eventId, artistId);
+
+                        responseObserver.onNext(
+
+                                        RelationshipResponse.newBuilder()
+
+                                                        .setChanged(changed)
+
+                                                        .build());
+
+                        responseObserver.onCompleted();
+
+                } catch (NoSuchElementException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.NOT_FOUND
+
+                                                        .withDescription(exception.getMessage())
+
+                                                        .asRuntimeException());
+
+                } catch (IllegalArgumentException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.INVALID_ARGUMENT
+
+                                                        .withDescription(exception.getMessage())
+
+                                                        .asRuntimeException());
+
+                } catch (IllegalStateException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.INTERNAL
+
+                                                        .withDescription("Failed to remove artist from event")
+
+                                                        .withCause(exception)
+
+                                                        .asRuntimeException());
+
+                }
+
+        }
+
+        @Override
+
+        public void addCategoryToEvent(
+
+                        EventCategoryRequest request,
+
+                        StreamObserver<RelationshipResponse> responseObserver) {
+
+                UUID eventId;
+
+                UUID categoryId;
+
+                try {
+
+                        eventId = UUID.fromString(request.getEventId());
+
+                } catch (IllegalArgumentException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.INVALID_ARGUMENT
+
+                                                        .withDescription("Invalid event ID")
+
+                                                        .asRuntimeException());
+
+                        return;
+
+                }
+
+                try {
+
+                        categoryId = UUID.fromString(request.getCategoryId());
+
+                } catch (IllegalArgumentException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.INVALID_ARGUMENT
+
+                                                        .withDescription("Invalid category ID")
+
+                                                        .asRuntimeException());
+
+                        return;
+
+                }
+
+                try {
+
+                        boolean changed = relationshipService.addCategoryToEvent(eventId, categoryId);
+
+                        responseObserver.onNext(
+
+                                        RelationshipResponse.newBuilder()
+
+                                                        .setChanged(changed)
+
+                                                        .build());
+
+                        responseObserver.onCompleted();
+
+                } catch (NoSuchElementException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.NOT_FOUND
+
+                                                        .withDescription(exception.getMessage())
+
+                                                        .asRuntimeException());
+
+                } catch (IllegalArgumentException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.INVALID_ARGUMENT
+
+                                                        .withDescription(exception.getMessage())
+
+                                                        .asRuntimeException());
+
+                } catch (IllegalStateException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.INTERNAL
+
+                                                        .withDescription("Failed to add category to event")
+
+                                                        .withCause(exception)
+
+                                                        .asRuntimeException());
+
+                }
+
+        }
+
+        @Override
+
+        public void removeCategoryFromEvent(
+
+                        EventCategoryRequest request,
+
+                        StreamObserver<RelationshipResponse> responseObserver) {
+
+                UUID eventId;
+
+                UUID categoryId;
+
+                try {
+
+                        eventId = UUID.fromString(request.getEventId());
+
+                } catch (IllegalArgumentException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.INVALID_ARGUMENT
+
+                                                        .withDescription("Invalid event ID")
+
+                                                        .asRuntimeException());
+
+                        return;
+
+                }
+
+                try {
+
+                        categoryId = UUID.fromString(request.getCategoryId());
+
+                } catch (IllegalArgumentException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.INVALID_ARGUMENT
+
+                                                        .withDescription("Invalid category ID")
+
+                                                        .asRuntimeException());
+
+                        return;
+
+                }
+
+                try {
+
+                        boolean changed = relationshipService.removeCategoryFromEvent(eventId, categoryId);
+
+                        responseObserver.onNext(
+
+                                        RelationshipResponse.newBuilder()
+
+                                                        .setChanged(changed)
+
+                                                        .build());
+
+                        responseObserver.onCompleted();
+
+                } catch (NoSuchElementException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.NOT_FOUND
+
+                                                        .withDescription(exception.getMessage())
+
+                                                        .asRuntimeException());
+
+                } catch (IllegalArgumentException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.INVALID_ARGUMENT
+
+                                                        .withDescription(exception.getMessage())
+
+                                                        .asRuntimeException());
+
+                } catch (IllegalStateException exception) {
+
+                        responseObserver.onError(
+
+                                        Status.INTERNAL
+
+                                                        .withDescription("Failed to remove category from event")
+
+                                                        .withCause(exception)
+
+                                                        .asRuntimeException());
+
+                }
+
+        }
+
 }

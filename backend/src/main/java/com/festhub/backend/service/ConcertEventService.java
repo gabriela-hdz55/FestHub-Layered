@@ -47,6 +47,8 @@ public final class ConcertEventService {
         return repository.findAll();
     }
 
+    public static final long MAX_ARTIST_TICKET_PRICE_SUM_CENTS = 50_000_000L;
+
     public Optional<ConcertEvent> update(
             UUID id,
             Optional<String> name,
@@ -59,28 +61,13 @@ public final class ConcertEventService {
         Objects.requireNonNull(availableTickets);
         Objects.requireNonNull(ticketPriceCents);
 
-        Optional<ConcertEvent> existingOptional = repository.findById(id);
-        if (existingOptional.isEmpty()) {
-            return Optional.empty();
-        }
-
-        ConcertEvent existing = existingOptional.get();
-
-        String mergedName = name.orElse(existing.name());
-        String mergedDescription = description.orElse(existing.description());
-        int mergedAvailableTickets = availableTickets.orElse(existing.availableTickets());
-        long mergedTicketPriceCents = ticketPriceCents.orElse(existing.ticketPriceCents());
-
-        validate(mergedName, mergedDescription, mergedAvailableTickets, mergedTicketPriceCents);
-
-        ConcertEvent mergedEvent = new ConcertEvent(
+        return repository.updateWithCrossRecordChecks(
                 id,
-                mergedName,
-                mergedDescription,
-                mergedAvailableTickets,
-                mergedTicketPriceCents);
-
-        return repository.update(mergedEvent);
+                name,
+                description,
+                availableTickets,
+                ticketPriceCents,
+                MAX_ARTIST_TICKET_PRICE_SUM_CENTS);
     }
 
     public boolean delete(UUID id) {
