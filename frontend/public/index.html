@@ -1,21 +1,418 @@
+<!-- HTML file - main method will read/parse code from this -->
 
+<style>
+    body { font-family: sans-serif; padding: 20px; }
+    /* Hide all panels by default, add a nice border */
+    .panel { display: none; border: 1px solid #ccc; padding: 15px; margin-bottom: 20px; }
+</style>
 
-
-<div class="panel" id="artist-panel">
-
-    <!-- Creating Artist -->
-    <h3>Create New Artist</h3>
-
-    <!-- creation input fields -->
-    <label>Artist Name:</label>
-    <input type="text" id="artistNameInput" placeholder="artist name here" maxlength="2000">
-    <br><br>
-
-    <label>Booking Contact:</label>
-    <input type="email" id="artistContactInput" placeholder="manager@band.com">
-    <br><br>
-
-    <!-- submit button -->
-    <button onclick="submitArtistData()">Create Artist</button>
-
+<h1> FestHub </h1>
+<div id="nav-menu" style="margin-bottom: 20px;">
+        <button onclick="switchPanel('artist-panel')">Manage Artists</button>
+        <button onclick="switchPanel('event-panel')">Manage Events</button>
+        <button onclick="switchPanel('category-panel')">Manage Categories</button>
+        <button onclick="switchPanel('media-panel')">Manage Media</button>
 </div>
+
+<!-- Artist Management Panel -->
+<div class="panel" id="artist-panel">
+    <hr>
+        <h2>Artists</h2>
+
+            <!-- Creating Artist -->
+        <h3>Create New Artist</h3>
+            <!-- creation input fields -->
+        <label>Artist Name:</label>
+        <input type="text" id="artistNameInput" placeholder="artist name here" maxlength="2000">
+        <br><br>
+
+        <label>Booking Contact:</label>
+        <input type="email" id="artistContactInput" placeholder="manager@band.com">
+        <br><br>
+
+            <!-- submit button -->
+        <button onclick="submitArtistData()">Create Artist</button> 
+            <!-- Create, Read, Update, Delete operations -->
+        <h3>Manage Existing Artists</h3>
+        
+            <!-- Target ID required for Read, Update, and Delete ops -->
+        <label>Target Artist ID:</label>
+        <input type="text" id="targetArtistId" placeholder="Paste UUID here">
+        <button onclick="readArtist()">Read</button>
+        <button onclick="deleteArtist()">Delete</button>
+        <br><br>
+
+            <!-- New data only needed for Update ops -->
+        <label>New Name:</label>
+        <input type="text" id="updateNameInput" placeholder="New Name">
+        <label>New Contact:</label>
+        <input type="email" id="updateContactInput" placeholder="new@email.com">
+        <button onclick="updateArtist()">Update Artist</button>    
+   <hr>
+</div>
+
+<!-- Event Management Panel -->
+<div class="panel" id="event-panel">
+    <hr>
+    <h2>Concert Events</h2>
+
+            <!-- Create operation -->
+            <h3>Create New Event</h3>
+            <label>Event Name:</label>
+            <input type="text" id="eventNameInput" placeholder="e.g. summer fest">
+            <label>Description:</label>
+            <input type="text" id="eventDescInput" placeholder="details...">
+            <label>Tickets:</label>
+            <input type="number" id="eventTicketsInput" placeholder="500">
+            <label>Price ($):</label>
+            <input type="number" step="0.01" id="eventPriceInput" placeholder="49.99">
+            <button onclick="submitEventData()">Create Event</button>
+
+            <!-- R-U-D operations -->
+            <h3>Manage existing Events</h3>
+            <label>Target Event ID:</label>
+            <input type="text" id="targetEventId" placeholder="uuid here">
+            <button onclick="readEvent()">Read</button>
+            <button onclick="deleteEvent()">Delete</button>
+            <br><br>
+
+            <!-- Update fields -->
+            <label>New Name:</label>
+            <input type="text" id="updateEventName" placeholder="new name">
+            <label>New Desc:</label>
+            <input type="text" id="updateEventDesc" placeholder="new description">
+            <label>New ticket count:</label>
+            <input type="number" id="updateEventTickets" placeholder="0">
+            <label>New ticket Price ($):</label>
+            <input type="number" step="0.01" id="updateEventPrice" placeholder="19.99">
+            <button onclick="updateEvent()">Update Event</button>
+        <hr>
+</div>
+
+<!-- Booking Category Management Panel-->
+<div class="panel" id="category-panel">
+    <hr>
+        <h2>Booking Categories</h2>
+
+        <!-- CREATE operation -->
+        <h3>Create New Booking Category</h3>
+        <label>Category Name:</label>
+        <input type="text" id="categoryNameInput" placeholder="e.g. indie summer tour">
+        <label>Description:</label>
+        <input type="text" id="categoryDescInput" placeholder="details...">
+        <button onclick="submitCategoryData()">Create Booking Category</button>
+
+        <!-- R-U-D operations -->
+        <h3>Manage existing Booking Categories</h3>
+        <label>Target Category ID:</label>
+        <input type="text" id="targetCategoryId" placeholder="uuid here">
+        <button onclick="readCategory()">Read</button>
+        <button onclick="deleteCategory()">Delete</button>
+        <br><br>
+
+        <!-- update fields -->
+        <label>New Name:</label>
+        <input type="text" id="updateCategoryName" placeholder="new name">
+        <label>New Desc:</label>
+        <input type="text" id="updateCategoryDesc" placeholder="new description">
+        <button onclick="updateCategory()">Update Booking Category</button>
+        <hr>
+</div>
+
+<!-- Promotional Media Management Panel -->
+<div class="panel" id="media-panel">
+    <hr>
+        <h2>Promotional Media</h2>
+
+        <!-- CREATE operation -->
+        <h3>Create New Media</h3>
+        <label>Parent Event ID:</label>
+        <input type="text" id="mediaEventIdInput" placeholder="paste event uuid">
+        <label>Image URL:</label>
+        <input type="text" id="mediaUrlInput" placeholder="https://...">
+        <button onclick="submitMediaData()">Create Media</button>
+
+        <!-- R-U-D operations -->
+        <h3>Manage existing Media</h3>
+        <label>Target media ID:</label>
+        <input type="text" id="targetMediaId" placeholder="uuid here">
+        <button onclick="readMedia()">Read</button>
+        <button onclick="deleteMedia()">Delete</button>
+        <br><br>
+
+        <!-- update fields -->
+        <label>New event ID:</label>
+        <input type="text" id="updateMediaEventId" placeholder="new event uuid">
+        <label>New image URL:</label>
+        <input type="text" id="updateMediaUrl" placeholder="https://...">
+        <button onclick="updateMedia()">Update Media</button>
+    <hr>
+</div>
+
+                            <!-- Execution scripts -->
+<script>
+
+/* Panel toggle for switching between record types */
+    function switchPanel(targetId) {
+        const panels = document.querySelectorAll('.panel');
+        panels.forEach(panel => panel.style.display = 'none');
+        document.getElementById(targetId).style.display = 'block';
+    }
+
+/* ARTIST FUNCTIONALITIES */
+    // CREATE: Packages new name and Booking Contact into a POST payload
+    async function submitArtistData() {
+            // parse text from inputs
+            const name = document.getElementById('artistNameInput').value;
+            const contact = document.getElementById('artistContactInput').value;
+
+            if (!name || !contact) {
+                alert("All fields required.");
+                return;
+            }
+
+            // package the data into a standard web format
+            const payload = new URLSearchParams();
+            payload.append('name', name);
+            payload.append('contact', contact);
+
+            try {
+                // send to java server
+                const response = await fetch('/api/artist/create', {
+                    method: 'POST',
+                    body: payload
+                });
+
+                // Reading Java server's reply
+                const resultText = await response.text();
+                
+                if (response.ok) {
+                    alert("Artist Created!\nServer says: " + resultText);
+                    // Clear the boxes for the next entry
+                    document.getElementById('artistNameInput').value = '';
+                    document.getElementById('artistContactInput').value = '';
+                } else {
+                    alert("Failed: " + resultText);
+                }
+            } catch (error) {
+                alert("Network error. Is the server running?");
+            }
+        }
+
+    // READ: Fires a GET request with the ID attached to the URL
+        async function readArtist() {
+            const id = document.getElementById('targetArtistId').value;
+            if (!id) return alert("ID required to read.");
+            try {
+                const response = await fetch('/api/artist/read?id=' + encodeURIComponent(id));
+                alert("Server says: " + await response.text());
+            } catch (error) { alert("Network error."); }
+        }
+
+        // DELETE: Fires a DELETE request with the ID attached to the URL
+        async function deleteArtist() {
+            const id = document.getElementById('targetArtistId').value;
+            if (!id) return alert("ID required to delete.");
+            try {
+                const response = await fetch('/api/artist/delete?id=' + encodeURIComponent(id), { method: 'DELETE' });
+                alert("Server says: " + await response.text());
+            } catch (error) { alert("Network error."); }
+        }
+
+        // UPDATE: Packages the ID, new name, and new contact into a POST payload
+        async function updateArtist() {
+            const id = document.getElementById('targetArtistId').value;
+            const name = document.getElementById('updateNameInput').value;
+            const contact = document.getElementById('updateContactInput').value;
+            if (!id || !name || !contact) return alert("ID, New Name, and New Contact required.");
+
+            const payload = new URLSearchParams();
+            payload.append('id', id);
+            payload.append('name', name);
+            payload.append('contact', contact);
+
+            try {
+                const response = await fetch('/api/artist/update', { method: 'POST', body: payload });
+                alert("Server says: " + await response.text());
+            } catch (error) { alert("Network error."); }
+        }
+
+/* CONCERT EVENT FUNCTIONALITIES */
+        // CREATE: sends name, desc, tickets, price
+        async function submitEventData() {
+            const name = document.getElementById('eventNameInput').value;
+            const desc = document.getElementById('eventDescInput').value;
+            const tickets = document.getElementById('eventTicketsInput').value;
+            const price = document.getElementById('eventPriceInput').value;
+
+            if (!name || !desc || !tickets || !price) return alert("All fields required.");
+
+            const payload = new URLSearchParams();
+            payload.append('name', name);
+            payload.append('desc', desc);
+            payload.append('tickets', tickets);
+            payload.append('price', price);
+
+            try {
+                const response = await fetch('/api/event/create', { method: 'POST', body: payload });
+                alert("server says: " + await response.text());
+            } catch (error) { alert("Network error."); }
+        }
+
+        // READ: gets event by id
+        async function readEvent() {
+            const id = document.getElementById('targetEventId').value;
+            if (!id) return alert("ID required.");
+            try {
+                const response = await fetch('/api/event/read?id=' + encodeURIComponent(id));
+                alert("server says: " + await response.text());
+            } catch (error) { alert("Network error."); }
+        }
+
+        // DELETE: removes event by id
+        async function deleteEvent() {
+            const id = document.getElementById('targetEventId').value;
+            if (!id) return alert("ID required.");
+            try {
+                const response = await fetch('/api/event/delete?id=' + encodeURIComponent(id), { method: 'DELETE' });
+                alert("server says: " + await response.text());
+            } catch (error) { alert("Network error."); }
+        }
+
+        // UPDATE: sends id and new fields
+        async function updateEvent() {
+            const id = document.getElementById('targetEventId').value;
+            const name = document.getElementById('updateEventName').value;
+            const desc = document.getElementById('updateEventDesc').value;
+            const tickets = document.getElementById('updateEventTickets').value;
+            const price = document.getElementById('updateEventPrice').value;
+
+            if (!id) return alert("ID required.");
+
+            const payload = new URLSearchParams();
+            payload.append('id', id);
+            if(name) payload.append('name', name);
+            if(desc) payload.append('desc', desc);
+            if(tickets) payload.append('tickets', tickets);
+            if(price) payload.append('price', price);
+
+            try {
+                const response = await fetch('/api/event/update', { method: 'POST', body: payload });
+                alert("server says: " + await response.text());
+            } catch (error) { alert("Network error."); }
+        }    
+
+/* BOOKING CATEGORIES FUNCTIONALITIES */
+        // CREATE: sends name, desc
+        async function submitCategoryData() {
+            const name = document.getElementById('categoryNameInput').value;
+            const desc = document.getElementById('categoryDescInput').value;
+
+            if (!name || !desc) return alert("All fields required.");
+
+            const payload = new URLSearchParams();
+            payload.append('name', name);
+            payload.append('desc', desc);
+
+            try {
+                const response = await fetch('/api/category/create', { method: 'POST', body: payload });
+                alert("server says: " + await response.text());
+            } catch (error) { alert("Network error."); }
+        }
+
+        // READ: gets category by id
+        async function readCategory() {
+            const id = document.getElementById('targetCategoryId').value;
+            if (!id) return alert("ID required.");
+            try {
+                const response = await fetch('/api/category/read?id=' + encodeURIComponent(id));
+                alert("server says: " + await response.text());
+            } catch (error) { alert("Network error."); }
+        }
+
+        // DELETE: removes category by id
+        async function deleteCategory() {
+            const id = document.getElementById('targetCategoryId').value;
+            if (!id) return alert("ID required.");
+            try {
+                const response = await fetch('/api/category/delete?id=' + encodeURIComponent(id), { method: 'DELETE' });
+                alert("server says: " + await response.text());
+            } catch (error) { alert("Network error."); }
+        }
+
+        // UPDATE: sends id and new fields
+        async function updateCategory() {
+            const id = document.getElementById('targetCategoryId').value;
+            const name = document.getElementById('updateCategoryName').value;
+            const desc = document.getElementById('updateCategoryDesc').value;
+
+            if (!id) return alert("ID required.");
+
+            const payload = new URLSearchParams();
+            payload.append('id', id);
+            if(name) payload.append('name', name);
+            if(desc) payload.append('desc', desc);
+
+            try {
+                const response = await fetch('/api/category/update', { method: 'POST', body: payload });
+                alert("server says: " + await response.text());
+            } catch (error) { alert("Network error."); }
+        }
+
+/* PROMOTIONAL MEDIA FUNCTIONALITIES */
+        // CREATE: packages event ID and image URL into a POST payload
+        async function submitMediaData() {
+            const eventId = document.getElementById('mediaEventIdInput').value;
+            const url = document.getElementById('mediaUrlInput').value;
+
+            if (!eventId || !url) return alert("All fields required.");
+
+            const payload = new URLSearchParams();
+            payload.append('eventId', eventId);
+            payload.append('url', url);
+
+            try {
+                const response = await fetch('/api/media/create', { method: 'POST', body: payload });
+                alert("server says: " + await response.text());
+            } catch (error) { alert("Network error."); }
+        }
+
+        // READ: gets media by id
+        async function readMedia() {
+            const id = document.getElementById('targetMediaId').value;
+            if (!id) return alert("ID required.");
+            try {
+                const response = await fetch('/api/media/read?id=' + encodeURIComponent(id));
+                alert("server says: " + await response.text());
+            } catch (error) { alert("Network error."); }
+        }
+
+        // DELETE: removes media by id
+        async function deleteMedia() {
+            const id = document.getElementById('targetMediaId').value;
+            if (!id) return alert("ID required.");
+            try {
+                const response = await fetch('/api/media/delete?id=' + encodeURIComponent(id), { method: 'DELETE' });
+                alert("server says: " + await response.text());
+            } catch (error) { alert("Network error."); }
+        }
+
+        // UPDATE: sends id and new fields
+        async function updateMedia() {
+            const id = document.getElementById('targetMediaId').value;
+            const eventId = document.getElementById('updateMediaEventId').value;
+            const url = document.getElementById('updateMediaUrl').value;
+
+            if (!id) return alert("ID required.");
+
+            const payload = new URLSearchParams();
+            payload.append('id', id);
+            if(eventId) payload.append('eventId', eventId);
+            if(url) payload.append('url', url);
+
+            try {
+                const response = await fetch('/api/media/update', { method: 'POST', body: payload });
+                alert("server says: " + await response.text());
+            } catch (error) { alert("Network error."); }
+        }        
+</script>
