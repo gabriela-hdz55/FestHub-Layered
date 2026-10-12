@@ -2,25 +2,31 @@ package com.festhub.backend.grpc;
 
 import com.festhub.backend.model.Artist;
 import com.festhub.backend.model.BookingCategory;
+import com.festhub.backend.model.ConcertEvent;
 import com.festhub.backend.model.PromoMedia;
 import com.festhub.backend.service.ArtistService;
 import com.festhub.backend.service.BookingCategoryService;
+import com.festhub.backend.service.ConcertEventService;
 import com.festhub.backend.service.PromoMediaService;
 import com.festhub.proto.ArtistResponse;
 import com.festhub.proto.BookingCategoryResponse;
+import com.festhub.proto.ConcertEventResponse;
 import com.festhub.proto.CreateArtistRequest;
 import com.festhub.proto.CreateBookingCategoryRequest;
+import com.festhub.proto.CreateConcertEventRequest;
 import com.festhub.proto.CreatePromoMediaRequest;
 import com.festhub.proto.DeleteResponse;
 import com.festhub.proto.FestHubGrpc;
 import com.festhub.proto.GetByIdRequest;
 import com.festhub.proto.ListArtistsResponse;
 import com.festhub.proto.ListBookingCategoriesResponse;
+import com.festhub.proto.ListConcertEventsResponse;
 import com.festhub.proto.ListPromoMediaResponse;
 import com.festhub.proto.ListRequest;
 import com.festhub.proto.PromoMediaResponse;
 import com.festhub.proto.UpdateArtistRequest;
 import com.festhub.proto.UpdateBookingCategoryRequest;
+import com.festhub.proto.UpdateConcertEventRequest;
 import com.festhub.proto.UpdatePromoMediaRequest;
 
 import io.grpc.Status;
@@ -35,14 +41,17 @@ public final class FestHubServiceImpl
     private final BookingCategoryService bookingCategoryService;
     private final ArtistService artistService;
     private final PromoMediaService promoMediaService;
+    private final ConcertEventService concertEventService;
 
     public FestHubServiceImpl(
             BookingCategoryService bookingCategoryService,
             ArtistService artistService,
-            PromoMediaService promoMediaService) {
+            PromoMediaService promoMediaService,
+            ConcertEventService concertEventService) {
         this.bookingCategoryService = bookingCategoryService;
         this.artistService = artistService;
         this.promoMediaService = promoMediaService;
+        this.concertEventService = concertEventService;
     }
 
     @Override
@@ -672,6 +681,242 @@ public final class FestHubServiceImpl
                 .setId(promoMedia.id().toString())
                 .setEventId(promoMedia.eventId().toString())
                 .setImageUrl(promoMedia.imageUrl())
+                .build();
+    }
+
+    @Override
+    public void createConcertEvent(
+            CreateConcertEventRequest request,
+            StreamObserver<ConcertEventResponse> responseObserver) {
+        UUID id = null;
+
+        if (request.hasId()) {
+            try {
+                id = UUID.fromString(request.getId());
+            } catch (IllegalArgumentException exception) {
+                responseObserver.onError(
+                        Status.INVALID_ARGUMENT
+                                .withDescription("Invalid concert event ID")
+                                .asRuntimeException());
+                return;
+            }
+        }
+
+        try {
+            ConcertEvent event = concertEventService.create(
+                    id,
+                    request.getName(),
+                    request.getDescription(),
+                    request.getAvailableTickets(),
+                    request.getTicketPriceCents());
+
+            responseObserver.onNext(
+                    ConcertEventResponse.newBuilder()
+                            .setConcertEvent(toProto(event))
+                            .build());
+
+            responseObserver.onCompleted();
+        } catch (IllegalArgumentException exception) {
+            responseObserver.onError(
+                    Status.INVALID_ARGUMENT
+                            .withDescription(exception.getMessage())
+                            .asRuntimeException());
+        } catch (IllegalStateException exception) {
+            responseObserver.onError(
+                    Status.INTERNAL
+                            .withDescription("Failed to create concert event")
+                            .withCause(exception)
+                            .asRuntimeException());
+        }
+    }
+
+    @Override
+    public void getConcertEvent(
+            GetByIdRequest request,
+            StreamObserver<ConcertEventResponse> responseObserver) {
+        UUID id;
+
+        try {
+            id = UUID.fromString(request.getId());
+        } catch (IllegalArgumentException exception) {
+            responseObserver.onError(
+                    Status.INVALID_ARGUMENT
+                            .withDescription("Invalid concert event ID")
+                            .asRuntimeException());
+            return;
+        }
+
+        try {
+            Optional<ConcertEvent> event = concertEventService.getById(id);
+
+            if (event.isEmpty()) {
+                responseObserver.onError(
+                        Status.NOT_FOUND
+                                .withDescription(
+                                        "Concert event not found")
+                                .asRuntimeException());
+                return;
+            }
+
+            responseObserver.onNext(
+                    ConcertEventResponse.newBuilder()
+                            .setConcertEvent(
+                                    toProto(event.get()))
+                            .build());
+
+            responseObserver.onCompleted();
+        } catch (IllegalStateException exception) {
+            responseObserver.onError(
+                    Status.INTERNAL
+                            .withDescription("Failed to get concert event")
+                            .withCause(exception)
+                            .asRuntimeException());
+        }
+    }
+
+    @Override
+    public void listConcertEvents(
+            ListRequest request,
+            StreamObserver<ListConcertEventsResponse> responseObserver) {
+        try {
+            ListConcertEventsResponse.Builder response = ListConcertEventsResponse.newBuilder();
+
+            for (ConcertEvent event : concertEventService.listAll()) {
+                response.addConcertEvents(toProto(event));
+            }
+
+            responseObserver.onNext(response.build());
+            responseObserver.onCompleted();
+        } catch (IllegalStateException exception) {
+            responseObserver.onError(
+                    Status.INTERNAL
+                            .withDescription(
+                                    "Failed to list concert events")
+                            .withCause(exception)
+                            .asRuntimeException());
+        }
+    }
+
+    @Override
+    public void updateConcertEvent(
+            UpdateConcertEventRequest request,
+            StreamObserver<ConcertEventResponse> responseObserver) {
+        UUID id;
+
+        try {
+            id = UUID.fromString(request.getId());
+        } catch (IllegalArgumentException exception) {
+            responseObserver.onError(
+                    Status.INVALID_ARGUMENT
+                            .withDescription("Invalid concert event ID")
+                            .asRuntimeException());
+            return;
+        }
+
+        Optional<String> name = request.hasName()
+                ? Optional.of(request.getName())
+                : Optional.empty();
+        Optional<String> description = request.hasDescription()
+                ? Optional.of(request.getDescription())
+                : Optional.empty();
+        Optional<Integer> availableTickets = request.hasAvailableTickets()
+                ? Optional.of(request.getAvailableTickets())
+                : Optional.empty();
+        Optional<Long> ticketPriceCents = request.hasTicketPriceCents()
+                ? Optional.of(request.getTicketPriceCents())
+                : Optional.empty();
+
+        try {
+            Optional<ConcertEvent> event = concertEventService.update(
+                    id,
+                    name,
+                    description,
+                    availableTickets,
+                    ticketPriceCents);
+
+            if (event.isEmpty()) {
+                responseObserver.onError(
+                        Status.NOT_FOUND
+                                .withDescription(
+                                        "Concert event not found")
+                                .asRuntimeException());
+                return;
+            }
+
+            responseObserver.onNext(
+                    ConcertEventResponse.newBuilder()
+                            .setConcertEvent(
+                                    toProto(event.get()))
+                            .build());
+
+            responseObserver.onCompleted();
+        } catch (IllegalArgumentException exception) {
+            responseObserver.onError(
+                    Status.INVALID_ARGUMENT
+                            .withDescription(exception.getMessage())
+                            .asRuntimeException());
+        } catch (IllegalStateException exception) {
+            responseObserver.onError(
+                    Status.INTERNAL
+                            .withDescription(
+                                    "Failed to update concert event")
+                            .withCause(exception)
+                            .asRuntimeException());
+        }
+    }
+
+    @Override
+    public void deleteConcertEvent(
+            GetByIdRequest request,
+            StreamObserver<DeleteResponse> responseObserver) {
+        UUID id;
+
+        try {
+            id = UUID.fromString(request.getId());
+        } catch (IllegalArgumentException exception) {
+            responseObserver.onError(
+                    Status.INVALID_ARGUMENT
+                            .withDescription("Invalid concert event ID")
+                            .asRuntimeException());
+            return;
+        }
+
+        try {
+            boolean deleted = concertEventService.delete(id);
+
+            if (!deleted) {
+                responseObserver.onError(
+                        Status.NOT_FOUND
+                                .withDescription(
+                                        "Concert event not found")
+                                .asRuntimeException());
+                return;
+            }
+
+            responseObserver.onNext(
+                    DeleteResponse.newBuilder()
+                            .setDeleted(true)
+                            .build());
+
+            responseObserver.onCompleted();
+        } catch (IllegalStateException exception) {
+            responseObserver.onError(
+                    Status.INTERNAL
+                            .withDescription(
+                                    "Failed to delete concert event")
+                            .withCause(exception)
+                            .asRuntimeException());
+        }
+    }
+
+    private static com.festhub.proto.ConcertEvent toProto(
+            ConcertEvent event) {
+        return com.festhub.proto.ConcertEvent.newBuilder()
+                .setId(event.id().toString())
+                .setName(event.name())
+                .setDescription(event.description())
+                .setAvailableTickets(event.availableTickets())
+                .setTicketPriceCents(event.ticketPriceCents())
                 .build();
     }
 }

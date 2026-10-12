@@ -4,12 +4,15 @@ import com.festhub.backend.data.Database;
 import com.festhub.backend.grpc.FestHubServiceImpl;
 import com.festhub.backend.repository.ArtistRepository;
 import com.festhub.backend.repository.BookingCategoryRepository;
+import com.festhub.backend.repository.ConcertEventRepository;
 import com.festhub.backend.repository.JdbcArtistRepository;
 import com.festhub.backend.repository.JdbcBookingCategoryRepository;
+import com.festhub.backend.repository.JdbcConcertEventRepository;
 import com.festhub.backend.repository.JdbcPromoMediaRepository;
 import com.festhub.backend.repository.PromoMediaRepository;
 import com.festhub.backend.service.ArtistService;
 import com.festhub.backend.service.BookingCategoryService;
+import com.festhub.backend.service.ConcertEventService;
 import com.festhub.backend.service.PromoMediaService;
 
 import io.grpc.Grpc;
@@ -34,17 +37,20 @@ public class BackendServer {
         BookingCategoryRepository bookingCategoryRepository = new JdbcBookingCategoryRepository();
         ArtistRepository artistRepository = new JdbcArtistRepository();
         PromoMediaRepository promoMediaRepository = new JdbcPromoMediaRepository();
+        ConcertEventRepository concertEventRepository = new JdbcConcertEventRepository();
 
         // Business-logic layer.
         BookingCategoryService bookingCategoryService = new BookingCategoryService(bookingCategoryRepository);
         ArtistService artistService = new ArtistService(artistRepository);
         PromoMediaService promoMediaService = new PromoMediaService(promoMediaRepository);
+        ConcertEventService concertEventService = new ConcertEventService(concertEventRepository);
 
         // gRPC adapter layer.
         FestHubServiceImpl festHubService = new FestHubServiceImpl(
                 bookingCategoryService,
                 artistService,
-                promoMediaService);
+                promoMediaService,
+                concertEventService);
 
         // Restrict gRPC requests to the presentation tier.
         IpAllowListInterceptor interceptor = new IpAllowListInterceptor(allowedIp);
