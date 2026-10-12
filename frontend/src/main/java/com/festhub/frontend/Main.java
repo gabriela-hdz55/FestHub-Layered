@@ -160,7 +160,7 @@ public class Main {
                 
                 // Pending: Pass this data to gRPC backend here
                 
-                respond(ex, 200, "SUccessfully processed create for event: " + name, "text/plain");
+                respond(ex, 200, "Successfully processed create for event: " + name, "text/plain");
             } catch (Exception e) {
                 respond(ex, 500, "Server Error", "text/plain");
             }
@@ -248,7 +248,7 @@ public class Main {
             
             // Pending: Pass this data to gRPC backend here
             
-            respond(ex, 200, "SUccessfully processed read for category id: " + id, "text/plain");
+            respond(ex, 200, "Successfully processed read for category id: " + id, "text/plain");
         });
 
         // DELETE catcher
