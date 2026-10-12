@@ -1,16 +1,17 @@
 package com.festhub.frontend;
 
-import com.festhub.proto.GreeterGrpc;
-import com.festhub.proto.HelloRequest;
-import com.sun.net.httpserver.HttpServer;
-import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
-import io.grpc.StatusRuntimeException;
-
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+
+import com.festhub.proto.GreeterGrpc;
+import com.festhub.proto.HelloRequest;
+import com.sun.net.httpserver.HttpServer;
+
+import io.grpc.ManagedChannel;
+import io.grpc.ManagedChannelBuilder;
+import io.grpc.StatusRuntimeException;
 
 public class Main {
     public static void main(String[] args) throws Exception {
@@ -25,10 +26,15 @@ public class Main {
         HttpServer http = HttpServer.create(new InetSocketAddress(8080), 0);
 
         http.createContext("/", ex -> {
-            String html = "<h1>Presentation Tier</h1>"
-                    + "<form action='/hello'><input name='name' placeholder='Your name'>"
-                    + "<button>Say hello</button></form>";
-            respond(ex, 200, html, "text/html");
+
+            try {
+                byte[] fileBytes = java.nio.file.Files.readAllBytes(java.nio.file.Paths.get("/public/index.html"));
+                String html = new String(fileBytes, StandardCharsets.UTF_8);
+                respond(ex, 200, html, "text/html");
+            } catch (Exception e) {
+                e.printStackTrace();
+                respond(ex, 404, "404: index.html not found.", "text/plain");
+            }
         });
 
         http.createContext("/hello", ex -> {
