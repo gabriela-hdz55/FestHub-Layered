@@ -10,5 +10,6 @@ FROM eclipse-temurin:21-jre
 RUN useradd -r app
 USER app
 COPY --from=build /src/frontend/target/app.jar /app.jar
+COPY --from=build /src/frontend/public /public
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "/app.jar"]
