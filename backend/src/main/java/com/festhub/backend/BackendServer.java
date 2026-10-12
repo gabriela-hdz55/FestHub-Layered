@@ -9,11 +9,14 @@ import com.festhub.backend.repository.JdbcArtistRepository;
 import com.festhub.backend.repository.JdbcBookingCategoryRepository;
 import com.festhub.backend.repository.JdbcConcertEventRepository;
 import com.festhub.backend.repository.JdbcPromoMediaRepository;
+import com.festhub.backend.repository.JdbcRelationshipRepository;
 import com.festhub.backend.repository.PromoMediaRepository;
+import com.festhub.backend.repository.RelationshipRepository;
 import com.festhub.backend.service.ArtistService;
 import com.festhub.backend.service.BookingCategoryService;
 import com.festhub.backend.service.ConcertEventService;
 import com.festhub.backend.service.PromoMediaService;
+import com.festhub.backend.service.RelationshipService;
 
 import io.grpc.Grpc;
 import io.grpc.InsecureServerCredentials;
@@ -38,19 +41,26 @@ public class BackendServer {
         ArtistRepository artistRepository = new JdbcArtistRepository();
         PromoMediaRepository promoMediaRepository = new JdbcPromoMediaRepository();
         ConcertEventRepository concertEventRepository = new JdbcConcertEventRepository();
+        RelationshipRepository relationshipRepository = new JdbcRelationshipRepository();
 
         // Business-logic layer.
         BookingCategoryService bookingCategoryService = new BookingCategoryService(bookingCategoryRepository);
         ArtistService artistService = new ArtistService(artistRepository);
         PromoMediaService promoMediaService = new PromoMediaService(promoMediaRepository);
         ConcertEventService concertEventService = new ConcertEventService(concertEventRepository);
+        RelationshipService relationshipService = new RelationshipService(
+                relationshipRepository,
+                concertEventRepository,
+                artistRepository,
+                bookingCategoryRepository);
 
         // gRPC adapter layer.
         FestHubServiceImpl festHubService = new FestHubServiceImpl(
                 bookingCategoryService,
                 artistService,
                 promoMediaService,
-                concertEventService);
+                concertEventService,
+                relationshipService);
 
         // Restrict gRPC requests to the presentation tier.
         IpAllowListInterceptor interceptor = new IpAllowListInterceptor(allowedIp);
