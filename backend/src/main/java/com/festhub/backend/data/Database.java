@@ -5,7 +5,6 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
-
 public final class Database {
 
     // Set using the environment variables DB_URL, DB_USER, and DB_PASSWORD.
@@ -52,7 +51,7 @@ public final class Database {
     // ---------------------------------------------------------
 
     // Opens a new connection to the database
-    static Connection connect() throws SQLException {
+    public static Connection connect() throws SQLException {
         if (url == null) {
             throw new IllegalStateException("Database.initialize() was not called");
         }
