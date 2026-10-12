@@ -2,9 +2,15 @@ package com.festhub.backend;
 
 import com.festhub.backend.data.Database;
 import com.festhub.backend.grpc.FestHubServiceImpl;
+import com.festhub.backend.repository.ArtistRepository;
 import com.festhub.backend.repository.BookingCategoryRepository;
+import com.festhub.backend.repository.JdbcArtistRepository;
 import com.festhub.backend.repository.JdbcBookingCategoryRepository;
+import com.festhub.backend.repository.JdbcPromoMediaRepository;
+import com.festhub.backend.repository.PromoMediaRepository;
+import com.festhub.backend.service.ArtistService;
 import com.festhub.backend.service.BookingCategoryService;
+import com.festhub.backend.service.PromoMediaService;
 
 import io.grpc.Grpc;
 import io.grpc.InsecureServerCredentials;
@@ -26,12 +32,19 @@ public class BackendServer {
 
         // Data-access layer.
         BookingCategoryRepository bookingCategoryRepository = new JdbcBookingCategoryRepository();
+        ArtistRepository artistRepository = new JdbcArtistRepository();
+        PromoMediaRepository promoMediaRepository = new JdbcPromoMediaRepository();
 
         // Business-logic layer.
         BookingCategoryService bookingCategoryService = new BookingCategoryService(bookingCategoryRepository);
+        ArtistService artistService = new ArtistService(artistRepository);
+        PromoMediaService promoMediaService = new PromoMediaService(promoMediaRepository);
 
         // gRPC adapter layer.
-        FestHubServiceImpl festHubService = new FestHubServiceImpl(bookingCategoryService);
+        FestHubServiceImpl festHubService = new FestHubServiceImpl(
+                bookingCategoryService,
+                artistService,
+                promoMediaService);
 
         // Restrict gRPC requests to the presentation tier.
         IpAllowListInterceptor interceptor = new IpAllowListInterceptor(allowedIp);
